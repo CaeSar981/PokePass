@@ -445,6 +445,9 @@ public final class PassMenus {
                 case NO_REWARD:
                     player.sendMessage(plugin.getLang().msg("reward.nothing", "&7这一级没有奖励"));
                     break;
+                case UNAVAILABLE:
+                    // 具体原因已由 RewardService 发出（点券/经济未就绪、物品名写错等）
+                    break;
                 default:
                     break;
             }

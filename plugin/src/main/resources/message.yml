@@ -18,6 +18,9 @@ reward:
   nothing: "&7没有可以领取的奖励"
   points-unavailable: "&c点券系统未就绪，这部分奖励请联系管理员补发"
   money-unavailable: "&c经济系统未就绪，这部分奖励请联系管理员补发"
+  unavailable: "&c这级奖励暂时领不了：%reason%"
+  partial: "&e有 &f%count% &e项奖励没发成功，请联系管理员补发"
+  claim-blocked: "&e有 &f%count% &e级奖励因系统未就绪暂时领不了，修好后可以再领"
 
 no-permission: "&c你没有权限"
 no-player: "&c找不到这个玩家"

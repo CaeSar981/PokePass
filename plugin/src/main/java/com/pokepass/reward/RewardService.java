@@ -18,6 +18,11 @@ import java.util.Map;
  *
  * <p>双轨：免费轨人人可领，高级轨要权限。两条轨各自记录领取状态，
  * 所以「1 级免费领了、高级没领」是合法状态。</p>
+ *
+ * <p>发放顺序是「先预检、再发放、最后落库」。预检这一步不能省：
+ * 以前是直接发、发完无条件标记已领，一旦某条发不出去（点券系统没装、
+ * 物品名写错），玩家就被标记成已领取，奖励永久丢失且无法重领，
+ * 只能让管理员去改数据库。</p>
  */
 public class RewardService {
 
@@ -26,7 +31,26 @@ public class RewardService {
         NOT_ENOUGH_LEVEL,
         NO_PERMISSION,
         ALREADY_CLAIMED,
-        NO_REWARD
+        NO_REWARD,
+        /** 这级奖励现在发不出去（前置没装 / 配置写错）。<b>没有标记已领</b>，修好后可以再领。 */
+        UNAVAILABLE
+    }
+
+    /** 一次领取的内部结果，带失败原因，供批量领取汇总用（不直接给玩家发消息） */
+    private static final class Outcome {
+        private final Result result;
+        private final String reason;
+        private final int failedCount;
+
+        Outcome(Result result, String reason, int failedCount) {
+            this.result = result;
+            this.reason = reason;
+            this.failedCount = failedCount;
+        }
+
+        static Outcome of(Result result) {
+            return new Outcome(result, null, 0);
+        }
     }
 
     private final PokePassPlugin plugin;
@@ -35,43 +59,101 @@ public class RewardService {
         this.plugin = plugin;
     }
 
+    /** 单个等级领取，失败会直接给玩家提示 */
     public Result claim(Player player, int level, boolean premiumTrack) {
+        Outcome outcome = claimInternal(player, level, premiumTrack, true);
+        if (outcome.result == Result.UNAVAILABLE) {
+            player.sendMessage(plugin.getLang().msg("reward.unavailable", "&c这级奖励暂时领不了：%reason%")
+                    .replace("%reason%", outcome.reason == null ? "前置未就绪" : outcome.reason));
+        } else if (outcome.failedCount > 0) {
+            player.sendMessage(plugin.getLang().msg("reward.partial", "&e有 %count% 项奖励没发成功，请联系管理员补发")
+                    .replace("%count%", String.valueOf(outcome.failedCount)));
+        }
+        return outcome.result;
+    }
+
+    /**
+     * 真正的领取逻辑。
+     *
+     * @param persist 是否立刻落库。批量领取传 false，由调用方最后统一存一次，
+     *                避免「50 级 × 2 轨 = 100 次同步 SQLite 写入」卡在主线程上。
+     */
+    private Outcome claimInternal(Player player, int level, boolean premiumTrack, boolean persist) {
         PlayerProgress progress = plugin.getProgressService().get(player);
         int currentLevel = progress.getLevel(plugin.getPassConfig());
         if (level > currentLevel) {
-            return Result.NOT_ENOUGH_LEVEL;
+            return Outcome.of(Result.NOT_ENOUGH_LEVEL);
         }
         List<RewardEntry> entries = premiumTrack
                 ? plugin.getRewardBook().premium(level)
                 : plugin.getRewardBook().free(level);
         if (entries.isEmpty()) {
-            return Result.NO_REWARD;
+            return Outcome.of(Result.NO_REWARD);
         }
         if (premiumTrack && !hasPremium(player)) {
-            return Result.NO_PERMISSION;
+            return Outcome.of(Result.NO_PERMISSION);
         }
         if (progress.isClaimed(level, premiumTrack)) {
-            return Result.ALREADY_CLAIMED;
+            return Outcome.of(Result.ALREADY_CLAIMED);
         }
-        give(player, entries);
+
+        // 预检：这一级只要有一条发不出去，就整级不发也不标记。
+        // 保证「领了就是拿到了」，不会出现标记已领却没到账的死账。
+        String blocked = whyUnavailable(entries);
+        if (blocked != null) {
+            return new Outcome(Result.UNAVAILABLE, blocked, 0);
+        }
+
+        List<RewardEntry> failed = give(player, entries);
         progress.markClaimed(level, premiumTrack);
-        plugin.getProgressService().store().save(progress);
-        return Result.OK;
+        if (persist) {
+            plugin.getProgressService().store().save(progress);
+        }
+        if (!failed.isEmpty()) {
+            // 预检放行了却仍然失败，属于运行时意外（命令抛错等）。
+            // 这种情况仍然标记已领，否则玩家反复重领会把前面发成功的条目刷成多份；
+            // 代价是必须把缺了哪几条讲清楚，并留下日志给管理员补发。
+            plugin.getLogger().warning("玩家 " + player.getName() + " 领取 " + level + " 级"
+                    + (premiumTrack ? "高级轨" : "免费轨") + " 奖励时，以下条目发放失败，需人工补发：");
+            for (RewardEntry entry : failed) {
+                plugin.getLogger().warning("  - " + entry.getRaw());
+            }
+        }
+        return new Outcome(Result.OK, null, failed.size());
     }
 
-    /** 批量领取所有「等级够、有权限、还没领」的奖励，返回领取条数 */
+    /** 批量领取所有「等级够、有权限、还没领」的奖励，返回真正领到的条数 */
     public int claimAll(Player player) {
         PlayerProgress progress = plugin.getProgressService().get(player);
         int currentLevel = progress.getLevel(plugin.getPassConfig());
         int max = Math.min(currentLevel, plugin.getRewardBook().maxLevelWithReward());
+        boolean premium = hasPremium(player);
         int claimed = 0;
+        int blocked = 0;
         for (int level = 1; level <= max; level++) {
-            if (claim(player, level, false) == Result.OK) {
+            Outcome free = claimInternal(player, level, false, false);
+            if (free.result == Result.OK) {
                 claimed++;
+            } else if (free.result == Result.UNAVAILABLE) {
+                blocked++;
             }
-            if (hasPremium(player) && claim(player, level, true) == Result.OK) {
-                claimed++;
+            if (premium) {
+                Outcome premiumOutcome = claimInternal(player, level, true, false);
+                if (premiumOutcome.result == Result.OK) {
+                    claimed++;
+                } else if (premiumOutcome.result == Result.UNAVAILABLE) {
+                    blocked++;
+                }
             }
+        }
+        // 整个批次只落库一次
+        if (claimed > 0) {
+            plugin.getProgressService().store().save(progress);
+        }
+        if (blocked > 0) {
+            player.sendMessage(plugin.getLang().msg("reward.claim-blocked",
+                            "&e有 %count% 级奖励因系统未就绪暂时领不了，修好后可以再领")
+                    .replace("%count%", String.valueOf(blocked)));
         }
         return claimed;
     }
@@ -107,52 +189,96 @@ public class RewardService {
         }
     }
 
-    /** 真正发东西。任何一条失败都不影响其它条，也不会阻断领取标记。 */
-    public void give(Player player, List<RewardEntry> entries) {
+    /**
+     * 预检一条奖励能不能真的发出去，返回 null 表示都能发。
+     *
+     * <p>覆盖的都是「必然失败」的情况：物品名拼错、命令为空、点券/经济前置没装。
+     * 这些如果放进 give() 里靠异常兜，就会变成静默失败。</p>
+     */
+    public String whyUnavailable(List<RewardEntry> entries) {
         for (RewardEntry entry : entries) {
-            try {
-                giveOne(player, entry);
-            } catch (Throwable t) {
-                plugin.getLogger().warning("发放奖励失败 " + entry.getRaw() + ": " + t.getMessage());
+            switch (entry.getKind()) {
+                case ITEM:
+                    String invalid = invalidItem(entry);
+                    if (invalid != null) {
+                        return invalid;
+                    }
+                    break;
+                case COMMAND:
+                    if (entry.getPayload() == null || entry.getPayload().trim().isEmpty()) {
+                        return "奖励命令为空";
+                    }
+                    break;
+                case POINTS:
+                    if (!plugin.getEconomy().pointsAvailable()) {
+                        return "点券系统未就绪";
+                    }
+                    break;
+                case MONEY:
+                    if (!plugin.getEconomy().vaultAvailable()) {
+                        return "经济系统未就绪";
+                    }
+                    break;
+                default:
+                    break;
             }
+        }
+        return null;
+    }
+
+    private String invalidItem(RewardEntry entry) {
+        try {
+            Material material = Material.valueOf(entry.getPayload().toUpperCase());
+            // data 越界在部分材质上会抛，构造一次才能真正确认
+            new ItemStack(material, 1, entry.getData());
+            return null;
+        } catch (Throwable t) {
+            return "物品名无效 " + entry.getPayload();
         }
     }
 
-    private void giveOne(Player player, RewardEntry entry) {
+    /** 真正发东西，返回没发成功的条目（空列表表示全成功）。任何一条失败都不影响其它条。 */
+    public List<RewardEntry> give(Player player, List<RewardEntry> entries) {
+        List<RewardEntry> failed = new ArrayList<RewardEntry>();
+        for (RewardEntry entry : entries) {
+            try {
+                if (!giveOne(player, entry)) {
+                    failed.add(entry);
+                }
+            } catch (Throwable t) {
+                plugin.getLogger().warning("发放奖励失败 " + entry.getRaw() + ": " + t.getMessage());
+                failed.add(entry);
+            }
+        }
+        return failed;
+    }
+
+    private boolean giveOne(Player player, RewardEntry entry) {
         switch (entry.getKind()) {
             case ITEM:
-                giveItem(player, entry);
-                break;
+                return giveItem(player, entry);
             case COMMAND:
                 String command = entry.getPayload()
                         .replace("{player}", player.getName())
                         .replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                break;
+                return true;
             case POINTS:
-                if (!plugin.getEconomy().givePoints(player, entry.getAmount())) {
-                    player.sendMessage(plugin.getLang().msg("reward.points-unavailable",
-                            "&c点券系统未就绪，这部分奖励请联系管理员补发"));
-                }
-                break;
+                return plugin.getEconomy().givePoints(player, entry.getAmount());
             case MONEY:
-                if (!plugin.getEconomy().giveMoney(player, entry.getAmount())) {
-                    player.sendMessage(plugin.getLang().msg("reward.money-unavailable",
-                            "&c经济系统未就绪，这部分奖励请联系管理员补发"));
-                }
-                break;
+                return plugin.getEconomy().giveMoney(player, entry.getAmount());
             default:
-                break;
+                return true;
         }
     }
 
-    private void giveItem(Player player, RewardEntry entry) {
+    private boolean giveItem(Player player, RewardEntry entry) {
         Material material;
         try {
             material = Material.valueOf(entry.getPayload().toUpperCase());
         } catch (IllegalArgumentException e) {
             plugin.getLogger().warning("奖励物品名无效: " + entry.getPayload());
-            return;
+            return false;
         }
         int remaining = entry.getAmount();
         ItemStack template = new ItemStack(material, 1, entry.getData());
@@ -166,6 +292,7 @@ public class RewardService {
             }
             remaining -= stackSize;
         }
+        return true;
     }
 
     /** 给界面用：把一条奖励渲染成一行可读文字 */

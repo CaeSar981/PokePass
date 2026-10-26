@@ -4,6 +4,7 @@ import com.pokepass.PokePassPlugin;
 import com.pokepass.data.PlayerProgress;
 import com.pokepass.gui.PassMenus;
 import com.pokepass.quest.Quest;
+import com.pokepass.reward.RewardEntry;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -177,6 +178,22 @@ public class PassCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§a[OK] §f任务表: 每日 " + plugin.getQuestBook().size(Quest.Period.DAILY)
                 + " 个 / 每周 " + plugin.getQuestBook().size(Quest.Period.WEEKLY)
                 + " 个，奖励等级 " + plugin.getRewardBook().maxLevelWithReward());
+
+        // 奖励预检自检：点券/经济没装时，含这类条目的奖励必须被判定成「发不出去」，
+        // 而不是照发一遍再标记已领——那样玩家就永久领不到了。
+        boolean pointsReady = plugin.getEconomy().pointsAvailable();
+        String pointsReason = plugin.getRewardService().whyUnavailable(
+                Arrays.asList(RewardEntry.parse("points:100")));
+        boolean pointsBlocked = pointsReason != null;
+        boolean pointsAsExpected = pointsReady != pointsBlocked;
+        sender.sendMessage((pointsAsExpected ? "§a[OK] " : "§c[FAIL] ")
+                + "§f点券奖励预检: 点券" + (pointsReady ? "已就绪" : "未就绪")
+                + " -> " + (pointsBlocked ? "拦截(" + pointsReason + ")" : "放行"));
+
+        String itemReason = plugin.getRewardService().whyUnavailable(
+                Arrays.asList(RewardEntry.parse("item:NOT_A_REAL_ITEM:1")));
+        sender.sendMessage((itemReason != null ? "§a[OK] " : "§c[FAIL] ")
+                + "§f坏物品预检: " + (itemReason != null ? "已拦截(" + itemReason + ")" : "未拦截，会静默丢奖励"));
 
         if (sender instanceof Player) {
             Player player = (Player) sender;
