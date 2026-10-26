@@ -1,0 +1,44 @@
+# ==========================================
+# PokePass 精灵战令
+# ==========================================
+
+storage:
+  # sqlite / yaml
+  # sqlite 只有一个文件，几千人都够用；yaml 一人一文件，只适合单服小规模
+  type: sqlite
+  file: pass.db
+
+pass:
+  # 战令最高多少级
+  max-level: 50
+  # 升级经验曲线：从 level 升到 level+1 需要 base + (level-1) * step
+  # 按默认值算：1→2 级 1000，2→3 级 1250，10→11 级 3250，满 50 级累计约 40 万
+  exp:
+    base: 1000
+    step: 250
+  # 高级轨（第二条奖励轨）
+  premium:
+    enabled: true
+    # 有这个权限的玩家才能领高级轨奖励，用权限插件给就相当于卖战令
+    permission: pokepass.premium
+
+daily:
+  # 每天几点重置每日任务（0-23）。写 5 就是凌晨 5 点才换新的一天
+  reset-hour: 0
+  # 每天从每日任务池里抽几个给玩家；0 = 全部放出来
+  # 抽样是按「玩家 UUID + 日期」算的，同一人当天重登不会换题
+  count: 3
+
+weekly:
+  # 每周几重置（MONDAY/TUESDAY/...）。按服务器每周第一天是周一计算
+  reset-day: MONDAY
+  # 每周任务放出几个；0 = 全部
+  count: 0
+
+reward:
+  # 允许补领以前等级的奖励（等级够了但当时没领的）
+  retro-claim: true
+
+quest:
+  # 快照型任务（图鉴收集数、背包满级精灵数、持有物品）多久刷新一次，单位 tick，20 = 1 秒
+  check-interval-ticks: 100

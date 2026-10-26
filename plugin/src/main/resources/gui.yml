@@ -1,0 +1,13 @@
+# 界面标题与尺寸。尺寸必须是 9 的倍数，9~54。
+main:
+  title: "&6&l战令 &8| &f主面板"
+  size: 27
+daily:
+  title: "&6&l战令 &8| &f每日任务"
+  size: 54
+weekly:
+  title: "&6&l战令 &8| &f每周任务"
+  size: 54
+reward:
+  title: "&6&l战令 &8| &f等级奖励"
+  size: 54

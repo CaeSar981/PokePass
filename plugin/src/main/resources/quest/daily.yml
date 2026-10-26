@@ -1,0 +1,116 @@
+# ==========================================
+# 每日任务池
+# ==========================================
+# 每天从这里面抽 config.yml 里 daily.count 个给玩家（count: 0 则全部放出）。
+#
+# 字段：
+#   name       任务名（支持 & 颜色码）
+#   type       任务类型，见下方列表
+#   amount     累积型 = 要做几次 / 累计到多少；快照型 = 要达到多少
+#   condition  条件，逗号分隔可写多个，* 表示不限
+#   exp        完成给多少战令经验
+#   icon       显示物品，必须是 Bukkit 1.12.2 的 Material 名
+#   data       物品数据值，一般 0
+#   lore       自己写的说明，进度和奖励会自动追加在后面
+#
+# 类型速查：
+#   Capture 捕捉 / BattleWin 对战胜利(Player,Trainer,WildPokemon) / Evolve 进化
+#   EggHatch 孵化 / ExperienceGain 精灵经验累计 / EVsGained 努力值累计
+#   BlockBreak 挖方块 / CraftItem 合成 / PlayerFish 钓鱼 / PickupItem 拾取
+#   EnchantItem 附魔 / Chat 聊天关键字 / InteractEntity NPC 交互 / PixelmonTrade 交易
+#   Pokedex 图鉴物种数 / MaxLevelPokemon 背包满级精灵数 / CheckItem 持有物品数
+
+quests:
+  d-catch-any:
+    name: "&b精灵猎人"
+    type: Capture
+    amount: 5
+    condition: "*"
+    exp: 150
+    icon: PAPER
+    lore:
+      - "&7去野外捕捉 5 只精灵"
+      - "&7任意种类都算"
+
+  d-catch-target:
+    name: "&b指名捕捉: 咚咚鼠"
+    type: Capture
+    amount: 2
+    condition: Dedenne
+    exp: 200
+    icon: PAPER
+    lore:
+      - "&7捕捉 2 只 &f咚咚鼠"
+      - "&7条件里写的是英文物种名"
+
+  d-battle-any:
+    name: "&c战斗训练"
+    type: BattleWin
+    amount: 3
+    condition: "*"
+    exp: 200
+    icon: IRON_SWORD
+    lore:
+      - "&7赢下 3 场对战"
+      - "&7野生、训练师、玩家都算"
+
+  d-battle-player:
+    name: "&c玩家对决"
+    type: BattleWin
+    amount: 1
+    condition: Player
+    exp: 300
+    icon: DIAMOND_SWORD
+    lore:
+      - "&7和玩家对战并获胜 1 次"
+
+  d-evolve:
+    name: "&a进化时刻"
+    type: Evolve
+    amount: 1
+    condition: "*"
+    exp: 250
+    icon: EMERALD
+    lore:
+      - "&7让任意一只精灵进化 1 次"
+
+  d-hatch:
+    name: "&e孵化新生命"
+    type: EggHatch
+    amount: 1
+    condition: "*"
+    exp: 220
+    icon: EGG
+    lore:
+      - "&7孵化 1 枚精灵蛋"
+
+  d-exp:
+    name: "&d经验积累"
+    type: ExperienceGain
+    amount: 5000
+    condition: "*"
+    exp: 150
+    icon: EXP_BOTTLE
+    lore:
+      - "&7让精灵累计获得 5000 点经验"
+      - "&7对战和喂经验糖都算"
+
+  d-mine:
+    name: "&7矿工日常"
+    type: BlockBreak
+    amount: 64
+    condition: STONE
+    exp: 100
+    icon: DIAMOND_PICKAXE
+    lore:
+      - "&7挖掉 64 块石头"
+
+  d-fish:
+    name: "&9钓鱼佬"
+    type: PlayerFish
+    amount: 5
+    condition: "*"
+    exp: 120
+    icon: FISHING_ROD
+    lore:
+      - "&7钓上 5 条鱼"

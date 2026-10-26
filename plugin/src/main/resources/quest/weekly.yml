@@ -1,0 +1,47 @@
+# ==========================================
+# 每周任务池
+# ==========================================
+# 字段和 daily.yml 完全一样，只是周期长度不同（每周一刷新，见 config.yml）。
+# 每周任务一般给的经验多、量也大，用来拉开活跃玩家的差距。
+
+quests:
+  w-catch:
+    name: "&b本周捕捉任务"
+    type: Capture
+    amount: 100
+    condition: "*"
+    exp: 2000
+    icon: PAPER
+    lore:
+      - "&7本周累计捕捉 100 只精灵"
+
+  w-battle:
+    name: "&c本周对战任务"
+    type: BattleWin
+    amount: 20
+    condition: "*"
+    exp: 2000
+    icon: DIAMOND_SWORD
+    lore:
+      - "&7本周赢下 20 场对战"
+
+  w-mine:
+    name: "&7本周采集任务"
+    type: BlockBreak
+    amount: 1024
+    condition: STONE
+    exp: 1500
+    icon: DIAMOND_PICKAXE
+    lore:
+      - "&7本周挖掉 1024 块石头"
+
+  w-pokedex:
+    name: "&6图鉴收集"
+    type: Pokedex
+    amount: 30
+    condition: "*"
+    exp: 3000
+    icon: BOOK
+    lore:
+      - "&7累计捕捉过 30 种不同的精灵"
+      - "&7由本插件自己统计，从装上那天开始算"

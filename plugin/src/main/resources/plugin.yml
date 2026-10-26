@@ -1,0 +1,21 @@
+name: PokePass
+main: com.pokepass.PokePassPlugin
+version: 1.0.0
+author: CaeSar981
+description: Pixelmon battle pass - daily/weekly quests, levels, dual-track rewards
+softdepend:
+  - PlaceholderAPI
+  - Vault
+  - PlayerPoints
+commands:
+  zl:
+    description: PokePass main command
+    aliases: [pass, ptxz, zhanling]
+    permission: pokepass.use
+permissions:
+  pokepass.use:
+    default: true
+  pokepass.premium:
+    default: false
+  pokepass.admin:
+    default: op

@@ -1,0 +1,42 @@
+# 所有对外文案。& 是颜色码，%xxx% 是变量，别把变量名写错。
+prefix: "&6&l战令 &8» &r"
+
+quest:
+  complete: "&a任务完成: &f%quest% &7(+%exp% 经验)"
+  status-done: "&a✔ 已完成"
+  status-progress: "&7进度 &f%now%&7/&f%max%"
+
+level-up: "&e战令等级提升! 当前 &f%level% &e级"
+
+reward:
+  available: "&a你有 &f%count% &a份战令奖励可以领取 &7(/zl reward)"
+  claimed: "&a已领取 &f%level% &a级%track%奖励"
+  claim-all: "&a已领取 &f%count% &a份奖励"
+  already: "&7这份奖励已经领过了"
+  not-enough-level: "&c战令等级不够"
+  no-permission: "&c你没有解锁高级轨"
+  nothing: "&7没有可以领取的奖励"
+  points-unavailable: "&c点券系统未就绪，这部分奖励请联系管理员补发"
+  money-unavailable: "&c经济系统未就绪，这部分奖励请联系管理员补发"
+
+no-permission: "&c你没有权限"
+no-player: "&c找不到这个玩家"
+bad-number: "&c数字格式不对"
+player-only: "&c这个命令只能玩家使用"
+reload: "&a配置已重载"
+usage-give: "&c用法: /zl give <玩家> <经验>"
+usage-reset: "&c用法: /zl reset <玩家>"
+admin-give: "&a已给 &f%player% &a加了 &f%amount% &a经验"
+admin-reset: "&a已重置 &f%player% &a的战令进度"
+
+info: "&7战令等级 &f%level% &7| 总经验 &f%exp% &7| 可领奖励 &f%claim%"
+
+help:
+  - "&6&l战令 &8| &f帮助"
+  - "&e/zl &7打开主面板"
+  - "&e/zl daily &7每日任务"
+  - "&e/zl weekly &7每周任务"
+  - "&e/zl reward &7等级奖励"
+  - "&e/zl claim &7一键领取"
+  - "&e/zl info &7查看自己的进度"
+  - "&8管理员: &e/zl reload&7, &e/zl give <玩家> <经验>&7, &e/zl reset <玩家>"

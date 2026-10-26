@@ -1,0 +1,70 @@
+# ==========================================
+# 等级奖励
+# ==========================================
+# 每一级两条轨：
+#   free     人人可领
+#   premium  需要 pass.premium.permission 权限（高级轨）
+#
+# 奖励写法（一行一条）：
+#   item:DIAMOND:5          5 个钻石；第三段可再加数据值，如 item:WOOL:1:14
+#   command:give {player} diamond 1     控制台执行，{player} 换成玩家名
+#   points:100              PlayerPoints 点券（没装就跳过并提示）
+#   money:500               Vault 金币（没装就跳过并提示）
+#
+# 提示：物品名必须是 Bukkit 1.12.2 的 Material 名，全大写。
+
+levels:
+  1:
+    free:
+      - "item:DIAMOND:3"
+    premium:
+      - "points:100"
+  2:
+    free:
+      - "item:GOLD_INGOT:8"
+    premium:
+      - "item:EXPERIENCE_BOTTLE:16"
+  3:
+    free:
+      - "item:EMERALD:5"
+    premium:
+      - "points:150"
+  4:
+    free:
+      - "item:IRON_INGOT:16"
+    premium:
+      - "item:GOLDEN_APPLE:2"
+  5:
+    free:
+      - "item:DIAMOND:6"
+      - "command:give {player} diamond 2"
+    premium:
+      - "points:300"
+      - "item:DIAMOND_BLOCK:1"
+  6:
+    free:
+      - "item:GOLD_INGOT:16"
+    premium:
+      - "points:200"
+  7:
+    free:
+      - "item:EMERALD:8"
+    premium:
+      - "item:EXPERIENCE_BOTTLE:32"
+  8:
+    free:
+      - "item:IRON_BLOCK:4"
+    premium:
+      - "points:250"
+  9:
+    free:
+      - "item:DIAMOND:10"
+    premium:
+      - "item:GOLDEN_APPLE:4"
+  10:
+    free:
+      - "item:DIAMOND_BLOCK:1"
+      - "command:give {player} diamond 3"
+    premium:
+      - "points:500"
+      - "item:NETHER_STAR:1"
