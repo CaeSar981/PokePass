@@ -304,6 +304,16 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                     + (broken == 0 ? "" : "，其中 " + broken + " 件当前发不出去 (" + firstReason + ")"));
         }
 
+        // 界面配置：gui.yml 里写错的材质 / 越界的槽位 / 撞掉的按钮，启动时就报出来，
+        // 免得玩家打开界面才发现某个按钮凭空消失
+        java.util.List<String> guiWarnings = plugin.getGuiConfig().warnings();
+        if (guiWarnings.isEmpty()) {
+            sender.sendMessage("§a[OK] §f界面配置: gui.yml 全部合法（5 个界面，按钮/装饰/内容区无冲突）");
+        } else {
+            sender.sendMessage("§c[FAIL] §f界面配置有 " + guiWarnings.size() + " 处问题，第一条: "
+                    + guiWarnings.get(0));
+        }
+
         if (sender instanceof Player) {
             Player player = (Player) sender;
             PlayerProgress progress = plugin.getProgressService().get(player);

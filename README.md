@@ -40,8 +40,30 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
 - `reward.yml` — 每级两条轨的奖励
 - `shop.yml` — 兑换商店的商品与价格
 - `message.yml` — 全部文案
-- `gui.yml` — 三个界面的标题与尺寸
+- `gui.yml` — 界面自定义（见下）
 - `pass.db` — SQLite 存档
+
+
+## 界面自定义
+
+五个界面（主面板 / 每日任务 / 每周任务 / 等级奖励 / 兑换商店）都可以在 `gui.yml` 里改：
+
+- **按钮**：每个按钮可改 `slot`（槽位）、`material`（材质）、`data`（数据值）、
+  `name`（名字）、`enabled`（设 `false` 隐藏）。按钮 id 见 gui.yml 注释：
+  主面板是 `daily` / `weekly` / `level` / `season` / `reward` / `shop` / `close`，
+  任务与奖励页是 `back` / `prev` / `next` / `claim-all` / `close`，商店是 `back` / `close`。
+- **装饰物**：`decor` 列表可在任意空槽位摆纯装饰物品，支持 `lore` 与 `glow`，
+  与按钮或内容区撞槽位会被自动跳过。
+- **底色**：`filler` 换铺底材质，如 `filler: "STAINED_GLASS_PANE:15"` 换成黑玻璃。
+- **内容区**：任务页 / 奖励页的 `content: "10-16,19-25"` 决定任务卡、奖励卡摆在哪，
+  分页按这里的格数自动重算。
+- **占位符**：按钮名与装饰物的 name / lore 支持 `%player%`、`%level%`、`%season%`、
+  `%days_left%`、`%claimable%`、`%points%`、`%daily_done%` 等实时变量，全表见 gui.yml 头部注释。
+
+规则：没写的键用默认值（默认值就是当前界面的长相），旧配置不用动；写错的项由
+`/zl selftest` 报出来并退回默认，不会炸插件。改完 `/zl reload` 生效。
+升级插件后想看新的注释模板，删掉 `plugins/PixelmonTXZ/gui.yml` 再 reload 即可重新生成。
+注意 shop 的标题与尺寸在 `shop.yml`，`gui.yml` 的 shop 段只管按钮和装饰。
 
 
 ## 赛季

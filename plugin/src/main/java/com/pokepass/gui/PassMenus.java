@@ -12,22 +12,28 @@ import org.bukkit.event.inventory.ClickType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
- * 三个界面：主面板 / 任务页（每日与每周共用）/ 奖励页。
+ * 五个界面：主面板 / 每日任务 / 每周任务 / 奖励页 / 兑换商店。
  *
  * <p>全部实现 {@link InventoryHolder}，事件按 holder 类型分派，
  * 不靠标题字符串匹配（标题里有色码和变量，匹配容易翻车）。</p>
+ *
+ * <p>界面长相来自 gui.yml：按钮的槽位、材质、名字，底色填充物，
+ * 装饰物，任务 / 奖励的内容槽位区都可改（见 {@link GuiConfig}）。
+ * 代码只负责往配置给的格子里填动态内容。</p>
  */
 public final class PassMenus {
 
     private PassMenus() {
     }
 
-    /** 三个界面的公共部分 */
+    /** 各界面的公共部分 */
     public abstract static class BaseMenu implements InventoryHolder {
 
         protected final PokePassPlugin plugin;
@@ -43,6 +49,9 @@ public final class PassMenus {
         public Inventory getInventory() {
             return inventory;
         }
+
+        /** gui.yml 里的菜单键：main / daily / weekly / reward / shop */
+        protected abstract String menuKey();
 
         protected abstract String title();
 
@@ -66,9 +75,9 @@ public final class PassMenus {
             }
         }
 
-        /** 铺一层灰色玻璃板做底 */
+        /** 铺一层底色（gui.yml 的 filler 可换材质） */
         protected void fillFrame(Inventory inv, int... skip) {
-            ItemStack pane = GuiKit.item(Material.STAINED_GLASS_PANE, 1, (short) 7, "&f", null);
+            ItemStack pane = plugin.getGuiConfig().filler(menuKey());
             outer:
             for (int i = 0; i < inv.getSize(); i++) {
                 for (int s : skip) {
@@ -79,6 +88,95 @@ public final class PassMenus {
                 inv.setItem(i, pane);
             }
         }
+
+        /** 把 gui.yml 的装饰物摆上去（名字 / lore 支持占位符）。
+         *  extraTaken：调用方自己占用的槽位（如商店的商品位），装饰物不与它们重叠 */
+        protected void renderDecor(int... extraTaken) {
+            outer:
+            for (GuiConfig.DecorItem decor : plugin.getGuiConfig().decor(menuKey())) {
+                // 商店的界面尺寸来自 shop.yml，可能比 gui.yml 校验时用的默认值小
+                if (decor.slot() < 0 || decor.slot() >= inventory.getSize()) {
+                    continue;
+                }
+                for (int taken : extraTaken) {
+                    if (taken == decor.slot()) {
+                        continue outer;
+                    }
+                }
+                ItemStack item = decor.template().clone();
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.setDisplayName(GuiKit.color(applyVars(decor.name())));
+                    if (!decor.lore().isEmpty()) {
+                        List<String> colored = new ArrayList<String>();
+                        for (String line : decor.lore()) {
+                            colored.add(GuiKit.color(applyVars(line)));
+                        }
+                        meta.setLore(colored);
+                    }
+                    item.setItemMeta(meta);
+                }
+                if (decor.glow()) {
+                    GuiKit.glow(item);
+                }
+                inventory.setItem(decor.slot(), item);
+            }
+        }
+
+        /** 某个按钮要不要显示、放在哪、长什么样 */
+        protected ButtonSpec button(String id) {
+            return plugin.getGuiConfig().button(menuKey(), id);
+        }
+
+        /**
+         * 按钮名字与装饰物上的占位符。全部基于打开界面的这个玩家实时取值，
+         * 每次 render 都会重算，所以开着的界面 redraw 后数字是新的。
+         */
+        protected String applyVars(String raw) {
+            if (raw == null || raw.indexOf('%') < 0) {
+                return raw;
+            }
+            PlayerProgress progress = plugin.getProgressService().get(player);
+            int level = progress.getLevel(plugin.getPassConfig());
+            long now = System.currentTimeMillis();
+            return raw
+                    .replace("%player%", player.getName())
+                    .replace("%level%", String.valueOf(level))
+                    .replace("%max_level%", String.valueOf(plugin.getPassConfig().maxLevel()))
+                    .replace("%exp_now%", String.valueOf(progress.expWithinLevel(plugin.getPassConfig())))
+                    .replace("%exp_need%", String.valueOf(plugin.getPassConfig().expForLevel(level)))
+                    .replace("%total_exp%", String.valueOf(progress.getTotalExp()))
+                    .replace("%season%", String.valueOf(plugin.getPassConfig().seasonId(now)))
+                    .replace("%days_left%", String.valueOf(plugin.getPassConfig().seasonDaysLeft(now)))
+                    .replace("%claimable%", String.valueOf(plugin.getRewardService().claimable(player)))
+                    .replace("%daily_done%", String.valueOf(doneCount(Quest.Period.DAILY)))
+                    .replace("%daily_max%", String.valueOf(visibleCount(Quest.Period.DAILY)))
+                    .replace("%weekly_done%", String.valueOf(doneCount(Quest.Period.WEEKLY)))
+                    .replace("%weekly_max%", String.valueOf(visibleCount(Quest.Period.WEEKLY)))
+                    .replace("%points%", String.valueOf(plugin.getEconomy().lookPoints(player)));
+        }
+
+        protected int doneCount(Quest.Period period) {
+            int count = 0;
+            for (Quest quest : plugin.getQuestService().visible(player,
+                    plugin.getProgressService().get(player))) {
+                if (quest.getPeriod() == period && plugin.getProgressService().get(player).isComplete(quest)) {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        protected int visibleCount(Quest.Period period) {
+            int count = 0;
+            for (Quest quest : plugin.getQuestService().visible(player,
+                    plugin.getProgressService().get(player))) {
+                if (quest.getPeriod() == period) {
+                    count++;
+                }
+            }
+            return count;
+        }
     }
 
     // ================= 主面板 =================
@@ -87,6 +185,11 @@ public final class PassMenus {
 
         public MainMenu(PokePassPlugin plugin, Player player) {
             super(plugin, player);
+        }
+
+        @Override
+        protected String menuKey() {
+            return "main";
         }
 
         @Override
@@ -102,13 +205,33 @@ public final class PassMenus {
         @Override
         public void render() {
             inventory.clear();
-            fillFrame(inventory, 11, 13, 15, 20, 22, 24, 26);
 
             PlayerProgress progress = plugin.getProgressService().get(player);
             int level = progress.getLevel(plugin.getPassConfig());
             int inLevel = progress.expWithinLevel(plugin.getPassConfig());
             int need = plugin.getPassConfig().expForLevel(level);
             boolean maxed = level >= plugin.getPassConfig().maxLevel();
+
+            ButtonSpec levelSpec = button("level");
+            ButtonSpec seasonSpec = button("season");
+            ButtonSpec dailySpec = button("daily");
+            ButtonSpec weeklySpec = button("weekly");
+            ButtonSpec rewardSpec = button("reward");
+            ButtonSpec shopSpec = button("shop");
+            ButtonSpec closeSpec = button("close");
+
+            List<Integer> used = new ArrayList<Integer>();
+            for (ButtonSpec spec : Arrays.asList(levelSpec, seasonSpec, dailySpec,
+                    weeklySpec, rewardSpec, shopSpec, closeSpec)) {
+                if (spec.enabled()) {
+                    used.add(spec.slot());
+                }
+            }
+            int[] skip = new int[used.size()];
+            for (int i = 0; i < skip.length; i++) {
+                skip[i] = used.get(i);
+            }
+            fillFrame(inventory, skip);
 
             List<String> levelLore = new ArrayList<String>();
             levelLore.add("&8&m                        ");
@@ -123,107 +246,112 @@ public final class PassMenus {
             levelLore.add("&7总经验 &f" + progress.getTotalExp());
             levelLore.add("&8&m                        ");
             levelLore.add("&7做完任务自动涨经验");
-            inventory.setItem(13, GuiKit.glow(GuiKit.item(Material.NETHER_STAR, 1, "&6&l战令等级 &f" + level, levelLore)));
+            if (levelSpec.enabled()) {
+                ItemStack levelItem = GuiKit.item(levelSpec.material(), 1, levelSpec.data(),
+                        applyVars(levelSpec.name()), levelLore);
+                inventory.setItem(levelSpec.slot(), GuiKit.glow(levelItem));
+            }
 
             // 赛季卡片：换季会清等级，得让玩家提前知道还剩几天
             long now = System.currentTimeMillis();
             boolean seasonOn = plugin.getPassConfig().seasonEnabled();
             int seasonId = plugin.getPassConfig().seasonId(now);
             int daysLeft = plugin.getPassConfig().seasonDaysLeft(now);
-            List<String> seasonLore = new ArrayList<String>();
-            seasonLore.add("&8&m                        ");
-            if (seasonOn) {
-                seasonLore.add("&7当前赛季 &f第 " + seasonId + " 赛季");
-                seasonLore.add("&7赛季长度 &f" + plugin.getPassConfig().seasonLengthDays() + " &7天");
-                seasonLore.add("&7还剩 &f" + daysLeft + " &7天换季");
+            if (seasonSpec.enabled()) {
+                List<String> seasonLore = new ArrayList<String>();
                 seasonLore.add("&8&m                        ");
-                seasonLore.add("&7换季后等级、领取记录、");
-                seasonLore.add("&7任务进度与商店限购都会重置");
-            } else {
-                seasonLore.add("&7赛季未启用");
-                seasonLore.add("&7等级会一直累积");
+                if (seasonOn) {
+                    seasonLore.add("&7当前赛季 &f第 " + seasonId + " 赛季");
+                    seasonLore.add("&7赛季长度 &f" + plugin.getPassConfig().seasonLengthDays() + " &7天");
+                    seasonLore.add("&7还剩 &f" + daysLeft + " &7天换季");
+                    seasonLore.add("&8&m                        ");
+                    seasonLore.add("&7换季后等级、领取记录、");
+                    seasonLore.add("&7任务进度与商店限购都会重置");
+                } else {
+                    seasonLore.add("&7赛季未启用");
+                    seasonLore.add("&7等级会一直累积");
+                }
+                inventory.setItem(seasonSpec.slot(), GuiKit.item(seasonSpec.material(), 1,
+                        seasonSpec.data(), applyVars(seasonSpec.name()), seasonLore));
             }
-            inventory.setItem(20, GuiKit.item(Material.WATCH, 1, "&e&l赛季 &f#" + seasonId, seasonLore));
 
-            int dailyDone = doneCount(progress, Quest.Period.DAILY);
-            int weeklyDone = doneCount(progress, Quest.Period.WEEKLY);
+            if (dailySpec.enabled()) {
+                inventory.setItem(dailySpec.slot(), GuiKit.item(dailySpec.material(), 1, dailySpec.data(),
+                        applyVars(dailySpec.name()), Arrays.asList(
+                        "&8&m                        ",
+                        "&7进度 &f" + doneCount(Quest.Period.DAILY) + "&7/&f" + visibleCount(Quest.Period.DAILY),
+                        "&7每天 &f" + plugin.getPassConfig().dailyResetHour() + " &7点刷新",
+                        "&8&m                        ",
+                        "&e点击查看")));
+            }
 
-            inventory.setItem(11, GuiKit.item(Material.BOOK, 1, "&b&l每日任务", java.util.Arrays.asList(
-                    "&8&m                        ",
-                    "&7进度 &f" + dailyDone + "&7/&f" + visibleCount(Quest.Period.DAILY),
-                    "&7每天 &f" + plugin.getPassConfig().dailyResetHour() + " &7点刷新",
-                    "&8&m                        ",
-                    "&e点击查看")));
-
-            inventory.setItem(15, GuiKit.item(Material.ENCHANTED_BOOK, 1, "&d&l每周任务", java.util.Arrays.asList(
-                    "&8&m                        ",
-                    "&7进度 &f" + weeklyDone + "&7/&f" + visibleCount(Quest.Period.WEEKLY),
-                    "&7每周一刷新",
-                    "&8&m                        ",
-                    "&e点击查看")));
+            if (weeklySpec.enabled()) {
+                inventory.setItem(weeklySpec.slot(), GuiKit.item(weeklySpec.material(), 1, weeklySpec.data(),
+                        applyVars(weeklySpec.name()), Arrays.asList(
+                        "&8&m                        ",
+                        "&7进度 &f" + doneCount(Quest.Period.WEEKLY) + "&7/&f" + visibleCount(Quest.Period.WEEKLY),
+                        "&7每周一刷新",
+                        "&8&m                        ",
+                        "&e点击查看")));
+            }
 
             int claimable = plugin.getRewardService().claimable(player);
-            List<String> rewardLore = new ArrayList<String>();
-            rewardLore.add("&8&m                        ");
-            rewardLore.add("&7免费轨：等级到了就能领");
-            rewardLore.add("&7高级轨：" + (plugin.getRewardService().hasPremium(player) ? "&a已解锁" : "&c未解锁"));
-            rewardLore.add("&7可领取 &f" + claimable + " &7份");
-            rewardLore.add("&8&m                        ");
-            rewardLore.add("&e点击查看");
-            ItemStack rewardItem = GuiKit.item(Material.CHEST, 1, "&6&l等级奖励", rewardLore);
-            if (claimable > 0) {
-                GuiKit.glow(rewardItem);
+            if (rewardSpec.enabled()) {
+                List<String> rewardLore = new ArrayList<String>();
+                rewardLore.add("&8&m                        ");
+                rewardLore.add("&7免费轨：等级到了就能领");
+                rewardLore.add("&7高级轨：" + (plugin.getRewardService().hasPremium(player) ? "&a已解锁" : "&c未解锁"));
+                rewardLore.add("&7可领取 &f" + claimable + " &7份");
+                rewardLore.add("&8&m                        ");
+                rewardLore.add("&e点击查看");
+                ItemStack rewardItem = GuiKit.item(rewardSpec.material(), 1, rewardSpec.data(),
+                        applyVars(rewardSpec.name()), rewardLore);
+                if (claimable > 0) {
+                    GuiKit.glow(rewardItem);
+                }
+                inventory.setItem(rewardSpec.slot(), rewardItem);
             }
-            inventory.setItem(22, rewardItem);
 
             // 商店：点券的消耗口。没配商品时不显示，免得玩家点进去看到空界面
-            if (!plugin.getShopBook().items().isEmpty()) {
+            boolean shopVisible = shopSpec.enabled() && !plugin.getShopBook().items().isEmpty();
+            if (shopVisible) {
                 List<String> shopLore = new ArrayList<String>();
                 shopLore.add("&8&m                        ");
                 shopLore.add("&7用点券 / 金币兑换道具");
                 shopLore.add("&7点券余额 &e" + plugin.getEconomy().lookPoints(player));
                 shopLore.add("&8&m                        ");
                 shopLore.add("&e点击进入");
-                inventory.setItem(24, GuiKit.item(Material.EMERALD, 1, "&a&l兑换商店", shopLore));
+                inventory.setItem(shopSpec.slot(), GuiKit.item(shopSpec.material(), 1, shopSpec.data(),
+                        applyVars(shopSpec.name()), shopLore));
             }
 
-            inventory.setItem(26, GuiKit.item(Material.BARRIER, 1, "&c关闭", null));
-        }
-
-        private int doneCount(PlayerProgress progress, Quest.Period period) {
-            int count = 0;
-            for (Quest quest : plugin.getQuestService().visible(player, progress)) {
-                if (quest.getPeriod() == period && progress.isComplete(quest)) {
-                    count++;
-                }
+            if (closeSpec.enabled()) {
+                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec.material(), 1, closeSpec.data(),
+                        applyVars(closeSpec.name()), null));
             }
-            return count;
-        }
 
-        private int visibleCount(Quest.Period period) {
-            int count = 0;
-            for (Quest quest : plugin.getQuestService().visible(player,
-                    plugin.getProgressService().get(player))) {
-                if (quest.getPeriod() == period) {
-                    count++;
-                }
-            }
-            return count;
+            renderDecor();
         }
 
         @Override
         public void handleClick(int slot, ClickType type) {
-            if (slot == 11) {
+            ButtonSpec dailySpec = button("daily");
+            ButtonSpec weeklySpec = button("weekly");
+            ButtonSpec rewardSpec = button("reward");
+            ButtonSpec shopSpec = button("shop");
+            ButtonSpec closeSpec = button("close");
+
+            if (dailySpec.enabled() && slot == dailySpec.slot()) {
                 new QuestMenu(plugin, player, Quest.Period.DAILY).open();
-            } else if (slot == 15) {
+            } else if (weeklySpec.enabled() && slot == weeklySpec.slot()) {
                 new QuestMenu(plugin, player, Quest.Period.WEEKLY).open();
-            } else if (slot == 22) {
+            } else if (rewardSpec.enabled() && slot == rewardSpec.slot()) {
                 new RewardMenu(plugin, player).open();
-            } else if (slot == 24) {
+            } else if (shopSpec.enabled() && slot == shopSpec.slot()) {
                 if (!plugin.getShopBook().items().isEmpty()) {
                     new ShopMenu(plugin, player).open();
                 }
-            } else if (slot == 26) {
+            } else if (closeSpec.enabled() && slot == closeSpec.slot()) {
                 player.closeInventory();
             }
         }
@@ -233,31 +361,55 @@ public final class PassMenus {
 
     public static class QuestMenu extends BaseMenu {
 
-        private static final int[] QUEST_SLOTS = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
-
         private final Quest.Period period;
+        private final int[] slots;
         private int page;
 
         public QuestMenu(PokePassPlugin plugin, Player player, Quest.Period period) {
             super(plugin, player);
             this.period = period;
+            this.slots = plugin.getGuiConfig().content(period == Quest.Period.DAILY ? "daily" : "weekly");
+        }
+
+        @Override
+        protected String menuKey() {
+            return period == Quest.Period.DAILY ? "daily" : "weekly";
         }
 
         @Override
         protected String title() {
-            return plugin.getGuiConfig().title(period == Quest.Period.DAILY ? "daily" : "weekly",
+            return plugin.getGuiConfig().title(menuKey(),
                     period == Quest.Period.DAILY ? "&6&l战令 &8| &f每日任务" : "&6&l战令 &8| &f每周任务");
         }
 
         @Override
         protected int size() {
-            return plugin.getGuiConfig().size(period == Quest.Period.DAILY ? "daily" : "weekly", 54);
+            return plugin.getGuiConfig().size(menuKey(), 54);
         }
 
         @Override
         public void render() {
             inventory.clear();
-            fillFrame(inventory, QUEST_SLOTS);
+
+            ButtonSpec backSpec = button("back");
+            ButtonSpec prevSpec = button("prev");
+            ButtonSpec nextSpec = button("next");
+            ButtonSpec closeSpec = button("close");
+
+            List<Integer> used = new ArrayList<Integer>();
+            for (int slot : slots) {
+                used.add(slot);
+            }
+            for (ButtonSpec spec : Arrays.asList(backSpec, prevSpec, nextSpec, closeSpec)) {
+                if (spec.enabled()) {
+                    used.add(spec.slot());
+                }
+            }
+            int[] skip = new int[used.size()];
+            for (int i = 0; i < skip.length; i++) {
+                skip[i] = used.get(i);
+            }
+            fillFrame(inventory, skip);
 
             PlayerProgress progress = plugin.getProgressService().get(player);
             List<Quest> quests = new ArrayList<Quest>();
@@ -266,7 +418,7 @@ public final class PassMenus {
                     quests.add(quest);
                 }
             }
-            int perPage = QUEST_SLOTS.length;
+            int perPage = slots.length;
             int maxPage = Math.max(0, (quests.size() - 1) / perPage);
             if (page > maxPage) {
                 page = maxPage;
@@ -277,17 +429,27 @@ public final class PassMenus {
                     break;
                 }
                 Quest quest = quests.get(index);
-                inventory.setItem(QUEST_SLOTS[i], renderQuest(quest, progress));
+                inventory.setItem(slots[i], renderQuest(quest, progress));
             }
 
-            inventory.setItem(45, GuiKit.item(Material.ARROW, 1, "&f返回", null));
-            if (page > 0) {
-                inventory.setItem(48, GuiKit.item(Material.SPECTRAL_ARROW, 1, "&a上一页", null));
+            if (backSpec.enabled()) {
+                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec.material(), 1,
+                        backSpec.data(), applyVars(backSpec.name()), null));
             }
-            if (page < maxPage) {
-                inventory.setItem(50, GuiKit.item(Material.SPECTRAL_ARROW, 1, "&a下一页", null));
+            if (prevSpec.enabled() && page > 0) {
+                inventory.setItem(prevSpec.slot(), GuiKit.item(prevSpec.material(), 1,
+                        prevSpec.data(), applyVars(prevSpec.name()), null));
             }
-            inventory.setItem(53, GuiKit.item(Material.BARRIER, 1, "&c关闭", null));
+            if (nextSpec.enabled() && page < maxPage) {
+                inventory.setItem(nextSpec.slot(), GuiKit.item(nextSpec.material(), 1,
+                        nextSpec.data(), applyVars(nextSpec.name()), null));
+            }
+            if (closeSpec.enabled()) {
+                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec.material(), 1,
+                        closeSpec.data(), applyVars(closeSpec.name()), null));
+            }
+
+            renderDecor();
         }
 
         private ItemStack renderQuest(Quest quest, PlayerProgress progress) {
@@ -313,17 +475,30 @@ public final class PassMenus {
 
         @Override
         public void handleClick(int slot, ClickType type) {
-            if (slot == 45) {
+            ButtonSpec backSpec = button("back");
+            ButtonSpec prevSpec = button("prev");
+            ButtonSpec nextSpec = button("next");
+            ButtonSpec closeSpec = button("close");
+
+            if (backSpec.enabled() && slot == backSpec.slot()) {
                 new MainMenu(plugin, player).open();
-            } else if (slot == 48 && page > 0) {
+                return;
+            }
+            if (prevSpec.enabled() && slot == prevSpec.slot() && page > 0) {
                 page--;
                 render();
-            } else if (slot == 50) {
+                return;
+            }
+            if (nextSpec.enabled() && slot == nextSpec.slot()) {
                 page++;
                 render();
-            } else if (slot == 53) {
-                player.closeInventory();
+                return;
             }
+            if (closeSpec.enabled() && slot == closeSpec.slot()) {
+                player.closeInventory();
+                return;
+            }
+            // 内容区里的点击不影响状态，吞掉即可（MenuListener 已经 cancel 了）
         }
     }
 
@@ -331,12 +506,17 @@ public final class PassMenus {
 
     public static class RewardMenu extends BaseMenu {
 
-        private static final int[] LEVEL_SLOTS = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
-
+        private final int[] slots;
         private int page;
 
         public RewardMenu(PokePassPlugin plugin, Player player) {
             super(plugin, player);
+            this.slots = plugin.getGuiConfig().content("reward");
+        }
+
+        @Override
+        protected String menuKey() {
+            return "reward";
         }
 
         @Override
@@ -352,13 +532,33 @@ public final class PassMenus {
         @Override
         public void render() {
             inventory.clear();
-            fillFrame(inventory, LEVEL_SLOTS);
+
+            ButtonSpec backSpec = button("back");
+            ButtonSpec prevSpec = button("prev");
+            ButtonSpec nextSpec = button("next");
+            ButtonSpec claimSpec = button("claim-all");
+            ButtonSpec closeSpec = button("close");
+
+            List<Integer> used = new ArrayList<Integer>();
+            for (int slot : slots) {
+                used.add(slot);
+            }
+            for (ButtonSpec spec : Arrays.asList(backSpec, prevSpec, nextSpec, claimSpec, closeSpec)) {
+                if (spec.enabled()) {
+                    used.add(spec.slot());
+                }
+            }
+            int[] skip = new int[used.size()];
+            for (int i = 0; i < skip.length; i++) {
+                skip[i] = used.get(i);
+            }
+            fillFrame(inventory, skip);
 
             PlayerProgress progress = plugin.getProgressService().get(player);
             int currentLevel = progress.getLevel(plugin.getPassConfig());
             boolean premium = plugin.getRewardService().hasPremium(player);
             int max = plugin.getRewardBook().maxLevelWithReward();
-            int perPage = LEVEL_SLOTS.length;
+            int perPage = slots.length;
             int maxPage = Math.max(0, (max - 1) / perPage);
             if (page > maxPage) {
                 page = maxPage;
@@ -368,22 +568,33 @@ public final class PassMenus {
                 if (level > max) {
                     break;
                 }
-                inventory.setItem(LEVEL_SLOTS[i], renderLevel(level, progress, currentLevel, premium));
+                inventory.setItem(slots[i], renderLevel(level, progress, currentLevel, premium));
             }
 
-            inventory.setItem(45, GuiKit.item(Material.ARROW, 1, "&f返回", null));
-            if (page > 0) {
-                inventory.setItem(48, GuiKit.item(Material.SPECTRAL_ARROW, 1, "&a上一页", null));
+            if (backSpec.enabled()) {
+                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec.material(), 1,
+                        backSpec.data(), applyVars(backSpec.name()), null));
             }
-            if (page < maxPage) {
-                inventory.setItem(50, GuiKit.item(Material.SPECTRAL_ARROW, 1, "&a下一页", null));
+            if (prevSpec.enabled() && page > 0) {
+                inventory.setItem(prevSpec.slot(), GuiKit.item(prevSpec.material(), 1,
+                        prevSpec.data(), applyVars(prevSpec.name()), null));
+            }
+            if (nextSpec.enabled() && page < maxPage) {
+                inventory.setItem(nextSpec.slot(), GuiKit.item(nextSpec.material(), 1,
+                        nextSpec.data(), applyVars(nextSpec.name()), null));
             }
             int claimable = plugin.getRewardService().claimable(player);
-            if (claimable > 0) {
-                inventory.setItem(49, GuiKit.glow(GuiKit.item(Material.ENDER_CHEST, 1, "&a&l一键领取 &7(" + claimable + ")",
-                        java.util.Arrays.asList("&7把所有够等级的奖励一次领完"))));
+            if (claimSpec.enabled() && claimable > 0) {
+                inventory.setItem(claimSpec.slot(), GuiKit.glow(GuiKit.item(claimSpec.material(), 1,
+                        claimSpec.data(), applyVars(claimSpec.name()) + " &7(" + claimable + ")",
+                        Arrays.asList("&7把所有够等级的奖励一次领完"))));
             }
-            inventory.setItem(53, GuiKit.item(Material.BARRIER, 1, "&c关闭", null));
+            if (closeSpec.enabled()) {
+                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec.material(), 1,
+                        closeSpec.data(), applyVars(closeSpec.name()), null));
+            }
+
+            renderDecor();
         }
 
         private ItemStack renderLevel(int level, PlayerProgress progress, int currentLevel, boolean premium) {
@@ -426,25 +637,31 @@ public final class PassMenus {
 
         @Override
         public void handleClick(int slot, ClickType type) {
-            if (slot == 45) {
+            ButtonSpec backSpec = button("back");
+            ButtonSpec prevSpec = button("prev");
+            ButtonSpec nextSpec = button("next");
+            ButtonSpec claimSpec = button("claim-all");
+            ButtonSpec closeSpec = button("close");
+
+            if (backSpec.enabled() && slot == backSpec.slot()) {
                 new MainMenu(plugin, player).open();
                 return;
             }
-            if (slot == 48 && page > 0) {
+            if (prevSpec.enabled() && slot == prevSpec.slot() && page > 0) {
                 page--;
                 render();
                 return;
             }
-            if (slot == 50) {
+            if (nextSpec.enabled() && slot == nextSpec.slot()) {
                 page++;
                 render();
                 return;
             }
-            if (slot == 53) {
+            if (closeSpec.enabled() && slot == closeSpec.slot()) {
                 player.closeInventory();
                 return;
             }
-            if (slot == 49) {
+            if (claimSpec.enabled() && slot == claimSpec.slot()) {
                 int count = plugin.getRewardService().claimAll(player);
                 if (count > 0) {
                     player.sendMessage(plugin.getLang().msg("reward.claim-all", "&a已领取 &f%count% &a份奖励")
@@ -455,11 +672,16 @@ public final class PassMenus {
                 render();
                 return;
             }
-            int index = indexOf(LEVEL_SLOTS, slot);
+            int index = indexOf(slots, slot);
             if (index < 0) {
                 return;
             }
-            int level = page * LEVEL_SLOTS.length + index + 1;
+            int max = plugin.getRewardBook().maxLevelWithReward();
+            int maxPage = Math.max(0, (max - 1) / slots.length);
+            if (page > maxPage) {
+                page = maxPage;
+            }
+            int level = page * slots.length + index + 1;
             boolean premiumTrack = type.isRightClick();
             RewardService.Result result = plugin.getRewardService().claim(player, level, premiumTrack);
             switch (result) {
@@ -503,6 +725,7 @@ public final class PassMenus {
 
     /**
      * 商店界面。商品槽位由 shop.yml 决定，界面只负责渲染和把点击转给 ShopService。
+     * 返回 / 关闭按钮与装饰物走 gui.yml 的 shop 段（标题与尺寸仍以 shop.yml 为准）。
      *
      * <p>余额、限购次数每次 render 都重新查：玩家可能在这个界面开着的时候
      * 从别处领到了点券，或者刚好被别人买走限购最后一份。</p>
@@ -511,6 +734,11 @@ public final class PassMenus {
 
         public ShopMenu(PokePassPlugin plugin, Player player) {
             super(plugin, player);
+        }
+
+        @Override
+        protected String menuKey() {
+            return "shop";
         }
 
         @Override
@@ -526,24 +754,48 @@ public final class PassMenus {
         @Override
         public void render() {
             inventory.clear();
-            List<Integer> itemSlots = new ArrayList<Integer>();
+
+            ButtonSpec backSpec = button("back");
+            ButtonSpec closeSpec = button("close");
+
+            List<Integer> used = new ArrayList<Integer>();
             for (com.pokepass.shop.ShopItem item : plugin.getShopBook().items()) {
-                itemSlots.add(item.getSlot());
+                used.add(item.getSlot());
             }
-            int[] skip = new int[itemSlots.size() + 2];
-            for (int i = 0; i < itemSlots.size(); i++) {
-                skip[i] = itemSlots.get(i);
+            for (ButtonSpec spec : Arrays.asList(backSpec, closeSpec)) {
+                if (spec.enabled() && spec.slot() < size()) {
+                    used.add(spec.slot());
+                }
             }
-            skip[skip.length - 2] = 18;
-            skip[skip.length - 1] = 26;
+            int[] skip = new int[used.size()];
+            for (int i = 0; i < skip.length; i++) {
+                skip[i] = used.get(i);
+            }
             fillFrame(inventory, skip);
 
             for (com.pokepass.shop.ShopItem item : plugin.getShopBook().items()) {
                 inventory.setItem(item.getSlot(), renderItem(item));
             }
 
-            inventory.setItem(18, GuiKit.item(Material.ARROW, 1, "&f返回", null));
-            inventory.setItem(26, GuiKit.item(Material.BARRIER, 1, "&c关闭", null));
+            if (backSpec.enabled() && backSpec.slot() < size()) {
+                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec.material(), 1,
+                        backSpec.data(), applyVars(backSpec.name()), null));
+            }
+            if (closeSpec.enabled() && closeSpec.slot() < size()) {
+                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec.material(), 1,
+                        closeSpec.data(), applyVars(closeSpec.name()), null));
+            }
+
+            // 商品位是 shop.yml 定的，装饰物别把它们盖掉
+            List<Integer> itemSlots = new ArrayList<Integer>();
+            for (com.pokepass.shop.ShopItem item : plugin.getShopBook().items()) {
+                itemSlots.add(item.getSlot());
+            }
+            int[] taken = new int[itemSlots.size()];
+            for (int i = 0; i < taken.length; i++) {
+                taken[i] = itemSlots.get(i);
+            }
+            renderDecor(taken);
         }
 
         private ItemStack renderItem(com.pokepass.shop.ShopItem item) {
@@ -588,11 +840,14 @@ public final class PassMenus {
 
         @Override
         public void handleClick(int slot, ClickType type) {
-            if (slot == 18) {
+            ButtonSpec backSpec = button("back");
+            ButtonSpec closeSpec = button("close");
+
+            if (backSpec.enabled() && slot == backSpec.slot() && backSpec.slot() < size()) {
                 new MainMenu(plugin, player).open();
                 return;
             }
-            if (slot == 26) {
+            if (closeSpec.enabled() && slot == closeSpec.slot() && closeSpec.slot() < size()) {
                 player.closeInventory();
                 return;
             }
