@@ -1,5 +1,5 @@
 # ==========================================
-# PokePass 精灵战令
+# PixelmonTXZ 精灵战令
 # ==========================================
 
 storage:
@@ -49,4 +49,12 @@ quest:
 anti-abuse:
   # 去重窗口（毫秒）。窗口内重复的同类型事件会被丢弃。写 0 关闭防刷
   dedupe-window-ms: 250
+
+# 启动自检：插件启用后延迟跑一遍 /zl selftest，把结果写进控制台。
+# 每次重启就知道配置有没有写坏，不用等人上号敲命令。
+self-test:
+  enabled: true
+  # 延迟几秒再跑。Vault / PlayerPoints 的 hook 不是 enable 当下就完成的，
+  # 立刻跑会把「还没 hook 上」误判成「没装」
+  delay-seconds: 5
 

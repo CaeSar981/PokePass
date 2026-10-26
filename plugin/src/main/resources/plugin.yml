@@ -1,4 +1,4 @@
-name: PokePass
+name: PixelmonTXZ
 main: com.pokepass.PokePassPlugin
 version: 1.0.1
 author: CaeSar981
@@ -9,8 +9,8 @@ softdepend:
   - PlayerPoints
 commands:
   zl:
-    description: PokePass main command
-    aliases: [pass, ptxz, zhanling]
+    description: PixelmonTXZ main command
+    aliases: [pass, ptxz, zhanling, pixelmontxz]
     permission: pokepass.use
 permissions:
   pokepass.use:

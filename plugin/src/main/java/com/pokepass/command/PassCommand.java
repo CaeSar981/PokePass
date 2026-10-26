@@ -154,8 +154,16 @@ public class PassCommand implements CommandExecutor, TabCompleter {
     }
 
     /** 自检：事件总线是否真的注册上了、任务表、存储读写 */
+    /**
+     * 启动自检入口：插件 enable 后延迟调一次，用控制台身份跑同一套检查。
+     * 这样每次重启就能在日志里看到配置有没有写坏，不必等人上号敲命令。
+     */
+    public void runSelftest(CommandSender sender) {
+        selftest(sender);
+    }
+
     private void selftest(CommandSender sender) {
-        sender.sendMessage("§6§l战令自检");
+        sender.sendMessage("§6§lPixelmonTXZ 战令自检");
 
         boolean busOk = false;
         int listenerCount = -1;
