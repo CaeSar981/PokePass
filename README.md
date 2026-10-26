@@ -155,13 +155,19 @@ levels:
 
 ## 构建
 
-```powershell
-.\build.ps1            # 出 dist\PokePass-1.0.0.jar
-.\build.ps1 -Deploy    # 顺便拷到 ..\TestServer\plugins（服务器没开时）
+```bash
+./build.sh             # 构建；服务端没在跑就顺带部署
+./build.sh deploy      # 构建并部署（服在跑同样跳过）
+./build.sh no-deploy   # 只构建，产物在 dist/
 ```
 
-依赖两个 jar 从 `..\PokeTraining\libs` 复用：CatServer 与 Pixelmon 8.4.3。
+jar 名由 `plugin.yml` 的 `name + version` 推导（当前 `dist/PixelmonTXZ-1.1.0.jar`），
+版本号只有那一处来源。依赖三个 jar 全部取自工作区根的 `../_libs/`：CatServer、
+Pixelmon 8.4.3、PlaceholderAPI（编译期用，运行期用服务端自带的）。
 `stub/` 下是 NMS 编译期桩，只为让 javac 能解析 Pixelmon 的签名，不进 jar。
+
+> 构建脚本历史上是 `build.ps1`（全套六个插件里唯一的 PowerShell 脚本），已统一成
+> `build.sh`，与其余五个插件同一组命令、同一套参数。
 
 ## 已知限制
 
