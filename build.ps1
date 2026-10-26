@@ -18,10 +18,19 @@ $StubSrc = "stub"
 $Classes = "build\classes"
 $Stubs = "build\stubs"
 $Dist = "dist"
-$JarName = "PokePass-1.0.0.jar"
 
-# Reuse the dependency jars already sitting in the PokeTraining project.
-$LibRoot = "..\PokeTraining\libs"
+# Version lives in plugin.yml only. Jar name and the version the server reports are both
+# derived from it, so they can never drift apart. A build stamp is appended inside the
+# packaged plugin.yml (not the source) so the startup line tells you which build is running.
+$Version = "1.0.0"
+foreach ($line in (Get-Content (Join-Path $Res "plugin.yml") -Encoding UTF8)) {
+    if ($line -match '^version:\s*(.+?)\s*$') { $Version = $Matches[1]; break }
+}
+$BuildVersion = $Version + "+b" + (Get-Date -Format "yyyyMMdd.HHmm")
+$JarName = "PokePass-$Version.jar"
+
+# Shared dependency jars for the whole workspace.
+$LibRoot = "..\_libs"
 $Cs = (Resolve-Path (Join-Path $LibRoot "CatServer-1.12.2-universal.jar")).Path
 $Pm = (Resolve-Path (Join-Path $LibRoot "Pixelmon-1.12.2-8.4.3-universal.jar")).Path
 
@@ -51,6 +60,15 @@ if ($LASTEXITCODE -ne 0) { Write-Output "PLUGIN COMPILE FAILED"; exit 1 }
 Write-Output "==> copy resources"
 Copy-Item "$Res\*" $Classes -Recurse -Force
 
+Write-Output "==> stamp build info ($BuildVersion)"
+# .NET file APIs ignore Set-Location, so build the path from $Root.
+$packaged = Join-Path $Root ($Classes + "\plugin.yml")
+$stamped = @()
+foreach ($line in (Get-Content $packaged -Encoding UTF8)) {
+    if ($line -match '^version:') { $stamped += "version: $BuildVersion" } else { $stamped += $line }
+}
+[IO.File]::WriteAllLines($packaged, $stamped, (New-Object System.Text.UTF8Encoding($false)))
+
 Write-Output "==> build jar"
 & $Jar cf "$Dist\$JarName" -C $Classes .
 if ($LASTEXITCODE -ne 0) { Write-Output "JAR FAILED"; exit 1 }
@@ -58,6 +76,7 @@ if ($LASTEXITCODE -ne 0) { Write-Output "JAR FAILED"; exit 1 }
 $info = Get-Item "$Dist\$JarName"
 $classCount = @(Get-ChildItem $Classes -Recurse -Filter *.class).Count
 Write-Output ("    jar  : dist\$JarName")
+Write-Output ("    ver  : " + $BuildVersion)
 Write-Output ("    size : " + $info.Length + " bytes")
 Write-Output ("    class: " + $classCount)
 

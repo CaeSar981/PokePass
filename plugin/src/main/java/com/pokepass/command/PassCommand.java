@@ -203,6 +203,10 @@ public class PassCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage((itemReason != null ? "§a[OK] " : "§c[FAIL] ")
                 + "§f坏物品预检: " + (itemReason != null ? "已拦截(" + itemReason + ")" : "未拦截，会静默丢奖励"));
 
+        long dedupe = plugin.getQuestService().dedupeWindowMs();
+        sender.sendMessage((dedupe > 0 ? "§a[OK] " : "§e[--] ")
+                + "§f防刷: 稀有事件 " + (dedupe > 0 ? dedupe + "ms 内重复触发只记一次" : "未开启（窗口为 0）"));
+
         if (sender instanceof Player) {
             Player player = (Player) sender;
             PlayerProgress progress = plugin.getProgressService().get(player);

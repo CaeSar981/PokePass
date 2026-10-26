@@ -110,5 +110,6 @@ public class BukkitListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.getProgressService().unload(event.getPlayer());
+        plugin.getQuestService().forget(event.getPlayer().getUniqueId());
     }
 }

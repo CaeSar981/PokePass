@@ -1,6 +1,6 @@
 name: PokePass
 main: com.pokepass.PokePassPlugin
-version: 1.0.0
+version: 1.0.1
 author: CaeSar981
 description: Pixelmon battle pass - daily/weekly quests, levels, dual-track rewards
 softdepend:

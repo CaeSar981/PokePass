@@ -122,6 +122,7 @@ public class PokePassPlugin extends JavaPlugin {
         questBook.reload();
         rewardBook.reload();
         guiConfig.reload();
+        questService.reload();
         economy = new Economy(getLogger());
         report();
     }
@@ -197,7 +198,9 @@ public class PokePassPlugin extends JavaPlugin {
                 + " 个, 奖励等级 " + rewardBook.maxLevelWithReward()
                 + ", 存储 " + store.describe()
                 + ", 点券 " + (economy.pointsAvailable() ? "可用" : "未装")
-                + ", 经济 " + (economy.vaultAvailable() ? "可用" : "未装"));
+                + ", 经济 " + (economy.vaultAvailable() ? "可用" : "未装")
+                + ", 防刷 " + (questService.dedupeWindowMs() > 0
+                        ? questService.dedupeWindowMs() + "ms" : "关闭"));
     }
 
     public PassConfig getPassConfig() {
