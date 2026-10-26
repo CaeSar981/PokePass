@@ -190,6 +190,14 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                 + "§f点券奖励预检: 点券" + (pointsReady ? "已就绪" : "未就绪")
                 + " -> " + (pointsBlocked ? "拦截(" + pointsReason + ")" : "放行"));
 
+        boolean vaultReady = plugin.getEconomy().vaultAvailable();
+        String moneyReason = plugin.getRewardService().whyUnavailable(
+                Arrays.asList(RewardEntry.parse("money:500")));
+        boolean moneyBlocked = moneyReason != null;
+        sender.sendMessage((vaultReady != moneyBlocked ? "§a[OK] " : "§c[FAIL] ")
+                + "§f金币奖励预检: 经济" + (vaultReady ? "已就绪" : "未就绪")
+                + " -> " + (moneyBlocked ? "拦截(" + moneyReason + ")" : "放行"));
+
         String itemReason = plugin.getRewardService().whyUnavailable(
                 Arrays.asList(RewardEntry.parse("item:NOT_A_REAL_ITEM:1")));
         sender.sendMessage((itemReason != null ? "§a[OK] " : "§c[FAIL] ")

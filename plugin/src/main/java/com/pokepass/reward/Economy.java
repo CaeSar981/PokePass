@@ -14,17 +14,33 @@ import java.util.logging.Logger;
  * <p>这个服务器没装 PlayerPoints，Vault 也只有 API 本体，所以两样都不能在编译期依赖，
  * 一律反射调。缺失时安静地返回 false，由调用方决定提示什么——绝不能让奖励发放
  * 因为某个前置没装就整体抛异常，那样玩家会卡在「已领取但没到账」的状态。</p>
+ *
+ * <p>探测必须是懒的。Vault 对接经济插件是异步完成的：它 onEnable 时只打印
+ * {@code Essentials Economy found: Waiting}，要等 EssentialsX 真正注册 service 之后
+ * 才会 {@code hooked}。如果只在插件构造时探测一次，就会永远停在「未就绪」。
+ * 所以这里改成：查询时如果还没探到，隔几秒重探，最多探若干次。</p>
  */
 public class Economy {
+
+    /** 两次重探之间的最小间隔，避免界面刷新时把重试次数瞬间用光 */
+    private static final long PROBE_COOLDOWN_MS = 3000L;
+    /** 最多重探多少次（每次间隔 3 秒，覆盖启动后约一分钟） */
+    private static final int MAX_PROBE_ATTEMPTS = 20;
 
     private final Logger logger;
 
     private Object pointsApi;
     private Method pointsGive;
     private Method pointsLook;
+    private int pointsProbeAttempts;
+    private long lastPointsProbe;
+    private boolean pointsFailureLogged;
 
     private Object vaultEconomy;
     private Method vaultDeposit;
+    private int vaultProbeAttempts;
+    private long lastVaultProbe;
+    private boolean vaultFailureLogged;
 
     public Economy(Logger logger) {
         this.logger = logger;
@@ -32,23 +48,43 @@ public class Economy {
         probeVault();
     }
 
+    private boolean shouldRetry(int attempts, long lastProbe) {
+        return attempts < MAX_PROBE_ATTEMPTS
+                && System.currentTimeMillis() - lastProbe >= PROBE_COOLDOWN_MS;
+    }
+
     private void probePoints() {
+        pointsProbeAttempts++;
+        lastPointsProbe = System.currentTimeMillis();
         try {
             Plugin plugin = Bukkit.getPluginManager().getPlugin("PlayerPoints");
             if (plugin == null) {
                 return;
             }
-            pointsApi = plugin.getClass().getMethod("getAPI").invoke(plugin);
-            pointsGive = pointsApi.getClass().getMethod("give", java.util.UUID.class, int.class);
-            pointsLook = pointsApi.getClass().getMethod("look", java.util.UUID.class);
+            Object api = plugin.getClass().getMethod("getAPI").invoke(plugin);
+            if (api == null) {
+                return;
+            }
+            pointsApi = api;
+            pointsGive = api.getClass().getMethod("give", java.util.UUID.class, int.class);
+            pointsLook = api.getClass().getMethod("look", java.util.UUID.class);
+            logger.info("已对接 PlayerPoints 点券");
         } catch (Throwable t) {
-            logger.info("PlayerPoints 未就绪，点券奖励将不可用: " + t.getClass().getSimpleName());
+            // 找不到 API 时 PlayerPoints 可能还没 enable 完，重探即可，别刷日志
+            if (!pointsFailureLogged) {
+                pointsFailureLogged = true;
+                logger.info("PlayerPoints 未就绪，点券奖励暂不可用: " + t.getClass().getSimpleName());
+            }
             pointsApi = null;
+            pointsGive = null;
+            pointsLook = null;
         }
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void probeVault() {
+        vaultProbeAttempts++;
+        lastVaultProbe = System.currentTimeMillis();
         try {
             if (Bukkit.getPluginManager().getPlugin("Vault") == null) {
                 return;
@@ -56,21 +92,36 @@ public class Economy {
             Class<?> economyClass = Class.forName("net.milkbowl.vault.economy.Economy");
             RegisteredServiceProvider<?> registration = Bukkit.getServicesManager().getRegistration((Class) economyClass);
             if (registration == null) {
+                // Vault 还在等 EssentialsX 之类注册 service，过几秒再探
                 return;
             }
-            vaultEconomy = registration.getProvider();
-            vaultDeposit = vaultEconomy.getClass().getMethod("depositPlayer", OfflinePlayer.class, double.class);
+            Object provider = registration.getProvider();
+            // 从接口取方法而不是实现类：中介实现类未必是 public，走接口才能稳定 invoke
+            Method deposit = economyClass.getMethod("depositPlayer", OfflinePlayer.class, double.class);
+            vaultEconomy = provider;
+            vaultDeposit = deposit;
+            logger.info("已对接 Vault 经济: " + provider.getClass().getSimpleName());
         } catch (Throwable t) {
-            logger.info("Vault 经济未就绪，金钱奖励将不可用: " + t.getClass().getSimpleName());
+            if (!vaultFailureLogged) {
+                vaultFailureLogged = true;
+                logger.info("Vault 经济未就绪，金钱奖励暂不可用: " + t.getClass().getSimpleName());
+            }
             vaultEconomy = null;
+            vaultDeposit = null;
         }
     }
 
     public boolean pointsAvailable() {
+        if (pointsApi == null && shouldRetry(pointsProbeAttempts, lastPointsProbe)) {
+            probePoints();
+        }
         return pointsApi != null && pointsGive != null;
     }
 
     public boolean vaultAvailable() {
+        if (vaultEconomy == null && shouldRetry(vaultProbeAttempts, lastVaultProbe)) {
+            probeVault();
+        }
         return vaultEconomy != null && vaultDeposit != null;
     }
 
