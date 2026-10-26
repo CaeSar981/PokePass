@@ -237,7 +237,9 @@ public class GuiConfig {
                 taken.add(spec.slot());
             }
         }
-        if (!menu.equals("shop")) {
+        // 内容区只对真正渲染它的三个列表页生效 —— 主菜单/商店不渲染内容，
+        // 不把它们算进占用，否则服主在主菜单摆装饰会被默认内容区误判撞位
+        if (menu.equals("daily") || menu.equals("weekly") || menu.equals("reward")) {
             for (int slot : content(menu)) {
                 taken.add(slot);
             }

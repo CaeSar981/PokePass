@@ -1,54 +1,47 @@
 # ============================================================================
-#  界面自定义（PixelmonTXZ 战令）
+#  界面自定义（PixelmonTXZ 战令）—— 黑底金框主题
 #
-#  没写的键一律用默认值，默认值就是当前界面的长相 —— 只改想改的就行。
-#  改完 /zl reload 生效；写错的部分启动自检（/zl selftest）会报出来，
-#  并退回默认值，不会炸插件。
+#  没写的键一律用默认值；改完 /zl reload 生效。
+#  写错的部分 /zl selftest 会报出来，并退回默认值，不会炸插件。
 #
-#  每个界面可配的内容：
+#  可配内容：
 #    title    标题（支持 & 色码）
-#    size     界面行数，必须是 9 的倍数，9~54
-#    filler   铺底填充物，写法 "材质" 或 "材质:数据值"
-#    buttons  每个按钮：slot 槽位 / material 材质 / data 数据值 /
-#             name 名字 / enabled 设 false 隐藏按钮
-#    decor    装饰物列表：slot / material / data / name / lore / glow，
-#             纯摆设，与按钮或内容区撞槽位会被跳过
-#    content  （仅 daily / weekly / reward）任务卡、奖励卡占用的槽位区，
-#             支持 "10-16,19-25" 这种写法；分页按这里的格数自动重算
+#    size     界面行数，9 的倍数，9~54
+#    filler   铺底填充物，"材质" 或 "材质:数据值"
+#    buttons  按钮：slot / material / data / name / enabled
+#    decor    装饰物：slot / material / data / name / lore / glow
+#             与按钮或内容区撞槽位会被跳过
+#    content  （仅 daily / weekly / reward）内容槽位区，支持 "10-16,19-25" 写法
 #
-#  名字里可用的占位符（实时取当前玩家数据）：
-#    %player%        玩家名            %level%         当前等级
-#    %max_level%     满级等级          %exp_now%       本级已有经验
-#    %exp_need%      本级升级所需      %total_exp%     总经验
-#    %season%        当前赛季号        %days_left%     距换季天数
-#    %claimable%     可领取奖励数      %points%        点券余额
-#    %daily_done% / %daily_max%       每日任务完成数 / 总数
-#    %weekly_done% / %weekly_max%     每周任务完成数 / 总数
+#  名字/lore 里可用的占位符：
+#    %player% %level% %max_level% %exp_now% %exp_need% %total_exp%
+#    %season% %days_left% %claimable% %points%
+#    %daily_done% %daily_max% %weekly_done% %weekly_max%
 #
-#  注意：shop 的标题与尺寸在 shop.yml 里，这里的 shop 段只管按钮和装饰。
+#  注意：shop 的标题与尺寸在 shop.yml，这里的 shop 段只管按钮和装饰。
 # ============================================================================
 
 main:
-  title: "&8宝可梦通行证 | 主菜单"
+  title: "&8&l宝可梦通行证 &8✦ 主菜单"
   size: 27
-  filler: "STAINED_GLASS_PANE:7"
+  filler: "STAINED_GLASS_PANE:15"
   buttons:
     daily:
       slot: 11
       material: BOOK
-      name: "&b&l每日任务"
+      name: "&e&l每日任务"
     weekly:
       slot: 15
       material: ENCHANTED_BOOK
       name: "&d&l每周任务"
     level:
       slot: 13
-      material: NETHER_STAR
-      name: "&6&l战令等级 &f%level%"
+      material: BEACON
+      name: "&6&l战令等级 &f&l%level%"
     season:
       slot: 20
       material: WATCH
-      name: "&e&l赛季 &f#%season%"
+      name: "&e&l赛季 #%season%"
     reward:
       slot: 22
       material: CHEST
@@ -57,102 +50,244 @@ main:
       slot: 24
       material: EMERALD
       name: "&a&l兑换商店"
-      # 没配商品时这个按钮本来就不显示；enabled 只是不想用商店时的硬开关
       enabled: true
     close:
       slot: 26
       material: BARRIER
-      name: "&c关闭"
-  # 装饰物示例（默认注释掉）：
-  # decor:
-  #   - slot: 4
-  #     material: SKULL_ITEM:3
-  #     name: "&e&l战令"
-  #     lore:
-  #       - "&7欢迎 %player% 来到战令"
-  #       - "&7当前赛季 #%season%，还剩 %days_left% 天"
-  #     glow: true
+      name: "&c✕ 关闭"
+  decor:
+    # 顶部横幅：黄玻璃铺满，中间星星展示个人进度
+    - { slot: 0, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 1, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 2, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 3, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 5, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 6, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 7, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 8, material: STAINED_GLASS_PANE, data: 4 }
+    - slot: 4
+      material: NETHER_STAR
+      glow: true
+      name: "&6&l✦ 宝可梦通行证 ✦"
+      lore:
+        - "&7欢迎回来，&f%player%"
+        - ""
+        - "&6等级 &f%level% &7/ %max_level%"
+        - "&7本级进度 &f%exp_now% &7/ &f%exp_need%"
+        - ""
+        - "&e赛季 #%season% &7还剩 &f%days_left% &7天"
+        - "&a可领奖励 &f%claimable% &7件 &8· &e点券 &f%points%"
+    # 左右两根金色立柱
+    - { slot: 9,  material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 17, material: STAINED_GLASS_PANE, data: 4 }
+    # 底部边框（20/22/24 是按钮，26 是关闭，留给它们）
+    - { slot: 18, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 19, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 21, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 23, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 25, material: STAINED_GLASS_PANE, data: 4 }
 
 daily:
-  title: "&8宝可梦通行证 | 每日任务"
+  title: "&8&l宝可梦通行证 &8» &e每日任务"
   size: 54
-  content: "10-16,19-25"
+  # 内容区 3 行 x 7 列，一页最多 21 个任务
+  content: "10-16,19-25,28-34"
+  filler: "STAINED_GLASS_PANE:15"
   buttons:
     back:
       slot: 45
       material: ARROW
-      name: "&f返回"
+      name: "&e« 返回主菜单"
     prev:
       slot: 48
       material: SPECTRAL_ARROW
-      name: "&a上一页"
+      name: "&a« 上一页"
     next:
       slot: 50
       material: SPECTRAL_ARROW
-      name: "&a下一页"
+      name: "&a下一页 »"
     close:
       slot: 53
       material: BARRIER
-      name: "&c关闭"
+      name: "&c✕ 关闭"
+  decor:
+    # 顶部横幅
+    - { slot: 0, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 1, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 2, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 3, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 5, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 6, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 7, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 8, material: STAINED_GLASS_PANE, data: 4 }
+    - slot: 4
+      material: BOOK
+      glow: true
+      name: "&e&l每日任务"
+      lore:
+        - "&7今日完成 &f%daily_done% &7/ &f%daily_max%"
+        - "&7完成任务即可领取战令经验"
+    # 左右边框
+    - { slot: 9,  material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 17, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 18, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 26, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 27, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 35, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 36, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 44, material: STAINED_GLASS_PANE, data: 4 }
+    # 底部边框（45/48/50/53 是按钮）
+    - { slot: 46, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 47, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 49, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 51, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 52, material: STAINED_GLASS_PANE, data: 4 }
 
 weekly:
-  title: "&8宝可梦通行证 | 每周任务"
+  title: "&8&l宝可梦通行证 &8» &d每周任务"
   size: 54
-  content: "10-16,19-25"
+  content: "10-16,19-25,28-34"
+  filler: "STAINED_GLASS_PANE:15"
   buttons:
     back:
       slot: 45
       material: ARROW
-      name: "&f返回"
+      name: "&e« 返回主菜单"
     prev:
       slot: 48
       material: SPECTRAL_ARROW
-      name: "&a上一页"
+      name: "&a« 上一页"
     next:
       slot: 50
       material: SPECTRAL_ARROW
-      name: "&a下一页"
+      name: "&a下一页 »"
     close:
       slot: 53
       material: BARRIER
-      name: "&c关闭"
+      name: "&c✕ 关闭"
+  decor:
+    - { slot: 0, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 1, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 2, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 3, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 5, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 6, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 7, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 8, material: STAINED_GLASS_PANE, data: 4 }
+    - slot: 4
+      material: ENCHANTED_BOOK
+      glow: true
+      name: "&d&l每周任务"
+      lore:
+        - "&7本周完成 &f%weekly_done% &7/ &f%weekly_max%"
+        - "&7每周一凌晨刷新，经验更多"
+    - { slot: 9,  material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 17, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 18, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 26, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 27, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 35, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 36, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 44, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 46, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 47, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 49, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 51, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 52, material: STAINED_GLASS_PANE, data: 4 }
 
 reward:
-  title: "&8宝可梦通行证 | 奖励列表"
+  title: "&8&l宝可梦通行证 &8» &6等级奖励"
   size: 54
-  content: "10-16,19-25"
+  content: "10-16,19-25,28-34"
+  filler: "STAINED_GLASS_PANE:15"
   buttons:
     back:
       slot: 45
       material: ARROW
-      name: "&f返回"
+      name: "&e« 返回主菜单"
     prev:
       slot: 48
       material: SPECTRAL_ARROW
-      name: "&a上一页"
+      name: "&a« 上一页"
     next:
       slot: 50
       material: SPECTRAL_ARROW
-      name: "&a下一页"
+      name: "&a下一页 »"
     claim-all:
       slot: 49
       material: ENDER_CHEST
-      name: "&a&l一键领取"
-      # 有可领奖励时才出现；不想给一键领取就 enabled: false
+      name: "&a&l一键领取 &f(%claimable%)"
       enabled: true
     close:
       slot: 53
       material: BARRIER
-      name: "&c关闭"
+      name: "&c✕ 关闭"
+  decor:
+    - { slot: 0, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 1, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 2, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 3, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 5, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 6, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 7, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 8, material: STAINED_GLASS_PANE, data: 4 }
+    - slot: 4
+      material: GOLD_BLOCK
+      glow: true
+      name: "&6&l等级奖励"
+      lore:
+        - "&7当前等级 &f%level% &7/ %max_level%"
+        - "&a可领取 &f%claimable% &7件"
+    - { slot: 9,  material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 17, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 18, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 26, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 27, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 35, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 36, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 44, material: STAINED_GLASS_PANE, data: 4 }
+    # 49 是一键领取按钮（有可领奖励时才出现），这里留空
+    - { slot: 46, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 47, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 51, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 52, material: STAINED_GLASS_PANE, data: 4 }
 
-# shop 的标题与尺寸在 shop.yml。这里只管返回/关闭按钮与装饰。
+# shop 的标题与尺寸在 shop.yml。商品默认占 10-16，装饰别放那一排。
 shop:
   buttons:
     back:
       slot: 18
       material: ARROW
-      name: "&f返回"
+      name: "&e« 返回主菜单"
     close:
       slot: 26
       material: BARRIER
-      name: "&c关闭"
+      name: "&c✕ 关闭"
+  decor:
+    # 顶部横幅：中间展示点券余额
+    - { slot: 0, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 1, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 2, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 3, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 5, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 6, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 7, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 8, material: STAINED_GLASS_PANE, data: 4 }
+    - slot: 4
+      material: EMERALD
+      glow: true
+      name: "&a&l兑换商店"
+      lore:
+        - "&e点券余额 &f%points%"
+        - "&7做战令任务赚点券，来这里花"
+    # 商品排两侧
+    - { slot: 9,  material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 17, material: STAINED_GLASS_PANE, data: 4 }
+    # 底部边框（18 返回、26 关闭）
+    - { slot: 19, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 20, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 21, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 22, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 23, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 24, material: STAINED_GLASS_PANE, data: 4 }
+    - { slot: 25, material: STAINED_GLASS_PANE, data: 4 }
