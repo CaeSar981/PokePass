@@ -1,5 +1,5 @@
 # 所有对外文案。& 是颜色码，%xxx% 是变量，别把变量名写错。
-prefix: "&6&l战令 &8» &r"
+prefix: "&6宝可梦通行证&f ➢ "
 
 quest:
   complete: "&a任务完成: &f%quest% &7(+%exp% 经验)"

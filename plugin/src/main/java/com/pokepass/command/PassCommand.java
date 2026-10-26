@@ -4,6 +4,7 @@ import com.pokepass.PokePassPlugin;
 import com.pokepass.data.PlayerProgress;
 import com.pokepass.gui.PassMenus;
 import com.pokepass.quest.Quest;
+import com.pokepass.quest.QuestType;
 import com.pokepass.reward.RewardEntry;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -62,6 +63,9 @@ public class PassCommand implements CommandExecutor, TabCompleter {
             }
             selftest(sender);
             return true;
+        }
+        if ("progress".equals(sub)) {
+            return addProgress(sender, args);
         }
         if (!(sender instanceof Player)) {
             sender.sendMessage(plugin.getLang().msg("player-only", "&c这个命令只能玩家用"));
@@ -162,6 +166,46 @@ public class PassCommand implements CommandExecutor, TabCompleter {
         selftest(sender);
     }
 
+    /**
+     * {@code /zl progress <玩家> <类型> [数量]}
+     *
+     * <p>给其它插件用的进度入口：特训 / 打工插件在精灵领取成功时，用控制台身份调这个，
+     * 把「完成一次特训 / 打工」推进到战令任务上。玩家自己调一律拒绝。</p>
+     */
+    private boolean addProgress(CommandSender sender, String[] args) {
+        boolean console = sender instanceof org.bukkit.command.ConsoleCommandSender;
+        if (!console && !sender.hasPermission("pokepass.admin")) {
+            sender.sendMessage(plugin.getLang().msg("no-permission", "&c你没有权限"));
+            return true;
+        }
+        if (args.length < 3) {
+            sender.sendMessage("§c用法: /zl progress <玩家> <类型> [数量]");
+            return true;
+        }
+        Player target = Bukkit.getPlayerExact(args[1]);
+        if (target == null) {
+            sender.sendMessage(plugin.getLang().msg("no-player", "&c找不到这个玩家"));
+            return true;
+        }
+        QuestType type = QuestType.of(args[2]);
+        if (type == null) {
+            sender.sendMessage("§c未知任务类型: " + args[2] + "（可用 training / working）");
+            return true;
+        }
+        int amount = 1;
+        if (args.length >= 4) {
+            try {
+                amount = Math.max(1, Integer.parseInt(args[3]));
+            } catch (NumberFormatException ignored) {
+                // 写错就按 1 算，不值得为一条内部调用把整次领取打成失败
+            }
+        }
+        boolean changed = plugin.getQuestService().advance(target, type, "*", amount);
+        sender.sendMessage("§7战令进度: " + target.getName() + " " + type.configName()
+                + " +" + amount + (changed ? " §a已推进" : " §7无匹配任务"));
+        return true;
+    }
+
     private void selftest(CommandSender sender) {
         sender.sendMessage("§6§lPixelmonTXZ 战令自检");
 
@@ -251,17 +295,24 @@ public class PassCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             List<String> subs = new ArrayList<String>(Arrays.asList("daily", "weekly", "reward", "claim", "info", "help"));
             if (sender.hasPermission("pokepass.admin")) {
-                subs.addAll(Arrays.asList("reload", "give", "reset", "selftest"));
+                subs.addAll(Arrays.asList("reload", "give", "reset", "selftest", "progress"));
             }
             for (String sub : subs) {
                 if (sub.startsWith(args[0].toLowerCase())) {
                     out.add(sub);
                 }
             }
-        } else if (args.length == 2 && (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("reset"))) {
+        } else if (args.length == 2 && (args[0].equalsIgnoreCase("give")
+                || args[0].equalsIgnoreCase("reset") || args[0].equalsIgnoreCase("progress"))) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (player.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
                     out.add(player.getName());
+                }
+            }
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("progress")) {
+            for (String type : new String[]{"training", "working"}) {
+                if (type.startsWith(args[2].toLowerCase())) {
+                    out.add(type);
                 }
             }
         }

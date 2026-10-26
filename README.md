@@ -16,6 +16,7 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
 | `/zl give <玩家> <经验>` | 加战令经验（admin） |
 | `/zl reset <玩家>` | 清空战令进度（admin） |
 | `/zl selftest` | 自检：事件总线、任务表、存储读写（admin） |
+| `/zl progress <玩家> <training\|working> [数量]` | 给其它插件用的进度入口（控制台 / admin），玩家自己调会被拒 |
 
 别名：`/pass`、`/ptxz`、`/zhanling`
 
@@ -58,6 +59,8 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
 | `InteractEntity` | NPC 名 / `*` | NPC 交互 |
 | `PixelmonTrade` | `*` | 精灵交易 |
 | `DeleteItem` | 物品名 | 消耗物品（接入时用） |
+| `TrainingFinish` | `*` | 完成一次精灵特训（PokeTraining 领取时自动派命令推进） |
+| `WorkFinish` | `*` | 完成一次精灵打工（PokeTools 领取成功时自动推进） |
 
 快照型（定时扫描，不累加）：
 

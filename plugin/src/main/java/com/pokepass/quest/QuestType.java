@@ -29,6 +29,15 @@ public enum QuestType {
     NPC_INTERACT("InteractEntity", false),
     TRADE("PixelmonTrade", false),
 
+    /**
+     * 跨插件联动：这两个不是 Bukkit 事件驱动的，由特训 / 打工插件在「领取成功」时
+     * 用控制台身份调 {@code /zl progress <玩家> training|working 1} 推进。
+     *
+     * <p>走命令而不是自定义事件，是为了不引入编译期依赖 —— 装了才联动，没装也不会报错。</p>
+     */
+    TRAINING("TrainingFinish", false),
+    WORKING("WorkFinish", false),
+
     MAX_LEVEL_POKEMON("MaxLevelPokemon", true),
     POKEDEX("Pokedex", true),
     CHECK_ITEM("CheckItem", true),
@@ -77,6 +86,14 @@ public enum QuestType {
         }
         if ("Pokedex".equalsIgnoreCase(key) || "Dex".equalsIgnoreCase(key)) {
             return POKEDEX;
+        }
+        if ("Training".equalsIgnoreCase(key) || "Train".equalsIgnoreCase(key)
+                || "特训".equals(key)) {
+            return TRAINING;
+        }
+        if ("Working".equalsIgnoreCase(key) || "Work".equalsIgnoreCase(key)
+                || "打工".equals(key)) {
+            return WORKING;
         }
         return null;
     }

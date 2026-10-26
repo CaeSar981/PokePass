@@ -19,6 +19,7 @@
 #   BlockBreak 挖方块 / CraftItem 合成 / PlayerFish 钓鱼 / PickupItem 拾取
 #   EnchantItem 附魔 / Chat 聊天关键字 / InteractEntity NPC 交互 / PixelmonTrade 交易
 #   Pokedex 图鉴物种数 / MaxLevelPokemon 背包满级精灵数 / CheckItem 持有物品数
+#   TrainingFinish 完成特训次数 / WorkFinish 完成打工次数（由特训/打工插件派命令推进）
 
 quests:
   d-catch-any:
@@ -114,3 +115,15 @@ quests:
     icon: FISHING_ROD
     lore:
       - "&7钓上 5 条鱼"
+
+  # 跨插件联动：精灵特训（PokeTraining）领取成功时由那边派命令推进。
+  # 没装特训插件这条任务是永远做不完的 —— 不想要就删掉这条。
+  d-train:
+    name: "&a特训助手"
+    type: TrainingFinish
+    amount: 2
+    condition: "*"
+    exp: 150
+    icon: EXP_BOTTLE
+    lore:
+      - "&7完成 2 次精灵特训并领取"

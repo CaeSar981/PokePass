@@ -45,3 +45,14 @@ quests:
     lore:
       - "&7累计捕捉过 30 种不同的精灵"
       - "&7由本插件自己统计，从装上那天开始算"
+
+  # 跨插件联动：精灵打工（PokeTools）领取成功时由那边派命令推进。
+  w-work:
+    name: "&e打工达人"
+    type: WorkFinish
+    amount: 5
+    condition: "*"
+    exp: 1200
+    icon: IRON_PICKAXE
+    lore:
+      - "&7本周完成 5 次精灵打工并领取"
