@@ -102,7 +102,7 @@ public final class PassMenus {
         @Override
         public void render() {
             inventory.clear();
-            fillFrame(inventory, 11, 13, 15, 22, 26);
+            fillFrame(inventory, 11, 13, 15, 20, 22, 24, 26);
 
             PlayerProgress progress = plugin.getProgressService().get(player);
             int level = progress.getLevel(plugin.getPassConfig());
@@ -124,6 +124,26 @@ public final class PassMenus {
             levelLore.add("&8&m                        ");
             levelLore.add("&7做完任务自动涨经验");
             inventory.setItem(13, GuiKit.glow(GuiKit.item(Material.NETHER_STAR, 1, "&6&l战令等级 &f" + level, levelLore)));
+
+            // 赛季卡片：换季会清等级，得让玩家提前知道还剩几天
+            long now = System.currentTimeMillis();
+            boolean seasonOn = plugin.getPassConfig().seasonEnabled();
+            int seasonId = plugin.getPassConfig().seasonId(now);
+            int daysLeft = plugin.getPassConfig().seasonDaysLeft(now);
+            List<String> seasonLore = new ArrayList<String>();
+            seasonLore.add("&8&m                        ");
+            if (seasonOn) {
+                seasonLore.add("&7当前赛季 &f第 " + seasonId + " 赛季");
+                seasonLore.add("&7赛季长度 &f" + plugin.getPassConfig().seasonLengthDays() + " &7天");
+                seasonLore.add("&7还剩 &f" + daysLeft + " &7天换季");
+                seasonLore.add("&8&m                        ");
+                seasonLore.add("&7换季后等级、领取记录、");
+                seasonLore.add("&7任务进度与商店限购都会重置");
+            } else {
+                seasonLore.add("&7赛季未启用");
+                seasonLore.add("&7等级会一直累积");
+            }
+            inventory.setItem(20, GuiKit.item(Material.WATCH, 1, "&e&l赛季 &f#" + seasonId, seasonLore));
 
             int dailyDone = doneCount(progress, Quest.Period.DAILY);
             int weeklyDone = doneCount(progress, Quest.Period.WEEKLY);
@@ -155,6 +175,17 @@ public final class PassMenus {
                 GuiKit.glow(rewardItem);
             }
             inventory.setItem(22, rewardItem);
+
+            // 商店：点券的消耗口。没配商品时不显示，免得玩家点进去看到空界面
+            if (!plugin.getShopBook().items().isEmpty()) {
+                List<String> shopLore = new ArrayList<String>();
+                shopLore.add("&8&m                        ");
+                shopLore.add("&7用点券 / 金币兑换道具");
+                shopLore.add("&7点券余额 &e" + plugin.getEconomy().lookPoints(player));
+                shopLore.add("&8&m                        ");
+                shopLore.add("&e点击进入");
+                inventory.setItem(24, GuiKit.item(Material.EMERALD, 1, "&a&l兑换商店", shopLore));
+            }
 
             inventory.setItem(26, GuiKit.item(Material.BARRIER, 1, "&c关闭", null));
         }
@@ -188,6 +219,10 @@ public final class PassMenus {
                 new QuestMenu(plugin, player, Quest.Period.WEEKLY).open();
             } else if (slot == 22) {
                 new RewardMenu(plugin, player).open();
+            } else if (slot == 24) {
+                if (!plugin.getShopBook().items().isEmpty()) {
+                    new ShopMenu(plugin, player).open();
+                }
             } else if (slot == 26) {
                 player.closeInventory();
             }
@@ -461,6 +496,125 @@ public final class PassMenus {
                 }
             }
             return -1;
+        }
+    }
+
+    // ================= 兑换商店 =================
+
+    /**
+     * 商店界面。商品槽位由 shop.yml 决定，界面只负责渲染和把点击转给 ShopService。
+     *
+     * <p>余额、限购次数每次 render 都重新查：玩家可能在这个界面开着的时候
+     * 从别处领到了点券，或者刚好被别人买走限购最后一份。</p>
+     */
+    public static class ShopMenu extends BaseMenu {
+
+        public ShopMenu(PokePassPlugin plugin, Player player) {
+            super(plugin, player);
+        }
+
+        @Override
+        protected String title() {
+            return plugin.getShopBook().title();
+        }
+
+        @Override
+        protected int size() {
+            return plugin.getShopBook().size();
+        }
+
+        @Override
+        public void render() {
+            inventory.clear();
+            List<Integer> itemSlots = new ArrayList<Integer>();
+            for (com.pokepass.shop.ShopItem item : plugin.getShopBook().items()) {
+                itemSlots.add(item.getSlot());
+            }
+            int[] skip = new int[itemSlots.size() + 2];
+            for (int i = 0; i < itemSlots.size(); i++) {
+                skip[i] = itemSlots.get(i);
+            }
+            skip[skip.length - 2] = 18;
+            skip[skip.length - 1] = 26;
+            fillFrame(inventory, skip);
+
+            for (com.pokepass.shop.ShopItem item : plugin.getShopBook().items()) {
+                inventory.setItem(item.getSlot(), renderItem(item));
+            }
+
+            inventory.setItem(18, GuiKit.item(Material.ARROW, 1, "&f返回", null));
+            inventory.setItem(26, GuiKit.item(Material.BARRIER, 1, "&c关闭", null));
+        }
+
+        private ItemStack renderItem(com.pokepass.shop.ShopItem item) {
+            List<String> lore = new ArrayList<String>(item.getLore());
+            lore.add("&8&m                        ");
+
+            // 商品内容照抄奖励描述，玩家不用猜「买了到底给什么」
+            for (String line : plugin.getRewardService().describeAll(item.getRewards())) {
+                lore.add("&7• " + line);
+            }
+            lore.add("&8&m                        ");
+
+            if (item.getCost() == com.pokepass.shop.ShopItem.Cost.POINTS) {
+                int balance = plugin.getEconomy().lookPoints(player);
+                lore.add("&7价格 &e" + item.getPrice() + " &7点券 &8(你有 " + balance + ")");
+            } else {
+                long balance = (long) plugin.getEconomy().moneyBalance(player);
+                lore.add("&7价格 &6" + item.getPrice() + " &7金币 &8(你有 " + balance + ")");
+            }
+
+            int remaining = plugin.getShopService().remaining(player, item);
+            if (remaining < 0) {
+                lore.add("&7限购 &f不限");
+            } else if (remaining == 0) {
+                lore.add("&c本赛季已兑换满 &8(" + item.getLimit() + ")");
+            } else {
+                lore.add("&7本赛季还可兑换 &f" + remaining + " &7次");
+            }
+
+            if (item.hasPermissionLimit() && !player.hasPermission(item.getPermission())) {
+                lore.add("&c缺少权限 &8" + item.getPermission());
+            } else if (remaining != 0) {
+                lore.add("&e点击兑换");
+            }
+
+            ItemStack stack = GuiKit.item(item.getIcon(), 1, item.getData(), item.getName(), lore);
+            if (remaining != 0 && (!item.hasPermissionLimit() || player.hasPermission(item.getPermission()))) {
+                GuiKit.glow(stack);
+            }
+            return stack;
+        }
+
+        @Override
+        public void handleClick(int slot, ClickType type) {
+            if (slot == 18) {
+                new MainMenu(plugin, player).open();
+                return;
+            }
+            if (slot == 26) {
+                player.closeInventory();
+                return;
+            }
+            com.pokepass.shop.ShopItem item = itemAt(slot);
+            if (item == null) {
+                return;
+            }
+            com.pokepass.shop.ShopService.Result result = plugin.getShopService().purchase(player, item);
+            if (result == com.pokepass.shop.ShopService.Result.OK) {
+                player.sendMessage(plugin.getLang().msg("shop.bought", "&a已兑换: &f%item%")
+                        .replace("%item%", item.getName()));
+            }
+            render();
+        }
+
+        private com.pokepass.shop.ShopItem itemAt(int slot) {
+            for (com.pokepass.shop.ShopItem item : plugin.getShopBook().items()) {
+                if (item.getSlot() == slot) {
+                    return item;
+                }
+            }
+            return null;
         }
     }
 }

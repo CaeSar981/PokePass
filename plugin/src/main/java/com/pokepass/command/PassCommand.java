@@ -78,6 +78,12 @@ public class PassCommand implements CommandExecutor, TabCompleter {
             new PassMenus.QuestMenu(plugin, player, Quest.Period.WEEKLY).open();
         } else if ("reward".equals(sub) || "rewards".equals(sub)) {
             new PassMenus.RewardMenu(plugin, player).open();
+        } else if ("shop".equals(sub) || "store".equals(sub)) {
+            if (plugin.getShopBook().items().isEmpty()) {
+                player.sendMessage(plugin.getLang().msg("shop.empty", "&7商店还没有配置商品"));
+                return true;
+            }
+            new PassMenus.ShopMenu(plugin, player).open();
         } else if ("claim".equals(sub)) {
             int count = plugin.getRewardService().claimAll(player);
             player.sendMessage(count > 0
@@ -92,6 +98,14 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                     .replace("%level%", String.valueOf(level))
                     .replace("%exp%", String.valueOf(progress.getTotalExp()))
                     .replace("%claim%", String.valueOf(plugin.getRewardService().claimable(player))));
+            if (plugin.getPassConfig().seasonEnabled()) {
+                long now = System.currentTimeMillis();
+                player.sendMessage(plugin.getLang().msg("info-season",
+                                "&7第 &f%season% &7赛季 &8| &7还剩 &f%days% &7天 &8| &7点券 &e%points%")
+                        .replace("%season%", String.valueOf(plugin.getPassConfig().seasonId(now)))
+                        .replace("%days%", String.valueOf(plugin.getPassConfig().seasonDaysLeft(now)))
+                        .replace("%points%", String.valueOf(plugin.getEconomy().lookPoints(player))));
+            }
         } else {
             help(sender);
         }
@@ -259,6 +273,37 @@ public class PassCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage((dedupe > 0 ? "§a[OK] " : "§e[--] ")
                 + "§f防刷: 稀有事件 " + (dedupe > 0 ? dedupe + "ms 内重复触发只记一次" : "未开启（窗口为 0）"));
 
+        long now = System.currentTimeMillis();
+        if (plugin.getPassConfig().seasonEnabled()) {
+            sender.sendMessage("§a[OK] §f赛季: 第 " + plugin.getPassConfig().seasonId(now)
+                    + " 赛季, 每季 " + plugin.getPassConfig().seasonLengthDays()
+                    + " 天, 还剩 " + plugin.getPassConfig().seasonDaysLeft(now) + " 天");
+        } else {
+            sender.sendMessage("§e[--] §f赛季未启用（等级、领取记录不会被重置）");
+        }
+
+        // 商店：商品条目里写错物品名 / 换了前置没装的货币，都在这条里暴露出来，
+        // 免得玩家点了兑换才发现点券系统根本不在
+        int shopCount = plugin.getShopBook().items().size();
+        if (shopCount == 0) {
+            sender.sendMessage("§e[--] §f商店: 未配置商品（shop.yml 为空）");
+        } else {
+            int broken = 0;
+            String firstReason = null;
+            for (com.pokepass.shop.ShopItem item : plugin.getShopBook().items()) {
+                String reason = plugin.getRewardService().whyUnavailable(item.getRewards());
+                if (reason != null) {
+                    broken++;
+                    if (firstReason == null) {
+                        firstReason = item.getId() + ": " + reason;
+                    }
+                }
+            }
+            sender.sendMessage((broken == 0 ? "§a[OK] " : "§c[FAIL] ")
+                    + "§f商店: " + shopCount + " 件商品"
+                    + (broken == 0 ? "" : "，其中 " + broken + " 件当前发不出去 (" + firstReason + ")"));
+        }
+
         if (sender instanceof Player) {
             Player player = (Player) sender;
             PlayerProgress progress = plugin.getProgressService().get(player);
@@ -282,6 +327,7 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                 "&e/zl daily &7每日任务",
                 "&e/zl weekly &7每周任务",
                 "&e/zl reward &7等级奖励",
+                "&e/zl shop &7兑换商店（点券/金币）",
                 "&e/zl claim &7一键领取",
                 "&e/zl info &7查看自己的进度",
                 "&8管理员: &e/zl reload&7, &e/zl give <玩家> <经验>&7, &e/zl reset <玩家>"))) {
@@ -293,7 +339,8 @@ public class PassCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> out = new ArrayList<String>();
         if (args.length == 1) {
-            List<String> subs = new ArrayList<String>(Arrays.asList("daily", "weekly", "reward", "claim", "info", "help"));
+            List<String> subs = new ArrayList<String>(Arrays.asList(
+                    "daily", "weekly", "reward", "shop", "claim", "info", "help"));
             if (sender.hasPermission("pokepass.admin")) {
                 subs.addAll(Arrays.asList("reload", "give", "reset", "selftest", "progress"));
             }

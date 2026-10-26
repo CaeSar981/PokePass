@@ -31,6 +31,7 @@ public class Economy {
 
     private Object pointsApi;
     private Method pointsGive;
+    private Method pointsTake;
     private Method pointsLook;
     private int pointsProbeAttempts;
     private long lastPointsProbe;
@@ -38,6 +39,8 @@ public class Economy {
 
     private Object vaultEconomy;
     private Method vaultDeposit;
+    private Method vaultWithdraw;
+    private Method vaultBalance;
     private int vaultProbeAttempts;
     private long lastVaultProbe;
     private boolean vaultFailureLogged;
@@ -67,6 +70,7 @@ public class Economy {
             }
             pointsApi = api;
             pointsGive = api.getClass().getMethod("give", java.util.UUID.class, int.class);
+            pointsTake = api.getClass().getMethod("take", java.util.UUID.class, int.class);
             pointsLook = api.getClass().getMethod("look", java.util.UUID.class);
             logger.info("已对接 PlayerPoints 点券");
         } catch (Throwable t) {
@@ -77,6 +81,7 @@ public class Economy {
             }
             pointsApi = null;
             pointsGive = null;
+            pointsTake = null;
             pointsLook = null;
         }
     }
@@ -98,8 +103,12 @@ public class Economy {
             Object provider = registration.getProvider();
             // 从接口取方法而不是实现类：中介实现类未必是 public，走接口才能稳定 invoke
             Method deposit = economyClass.getMethod("depositPlayer", OfflinePlayer.class, double.class);
+            Method withdraw = economyClass.getMethod("withdrawPlayer", OfflinePlayer.class, double.class);
+            Method balance = economyClass.getMethod("getBalance", OfflinePlayer.class);
             vaultEconomy = provider;
             vaultDeposit = deposit;
+            vaultWithdraw = withdraw;
+            vaultBalance = balance;
             logger.info("已对接 Vault 经济: " + provider.getClass().getSimpleName());
         } catch (Throwable t) {
             if (!vaultFailureLogged) {
@@ -108,6 +117,8 @@ public class Economy {
             }
             vaultEconomy = null;
             vaultDeposit = null;
+            vaultWithdraw = null;
+            vaultBalance = null;
         }
     }
 
@@ -160,6 +171,61 @@ public class Economy {
             return result instanceof Integer ? (Integer) result : 0;
         } catch (Throwable t) {
             return 0;
+        }
+    }
+
+    /**
+     * 扣点券。返回 false 表示没扣成（前置没装、余额不足、API 报错）。
+     *
+     * <p>PlayerPoints 的 take 自己会返回 boolean，余额不足时是 false 而不是抛异常，
+     * 所以调用方拿到 false 时<b>不该</b>继续发货。</p>
+     */
+    public boolean takePoints(OfflinePlayer player, int amount) {
+        if (!pointsAvailable() || pointsTake == null || amount <= 0) {
+            return false;
+        }
+        try {
+            Object result = pointsTake.invoke(pointsApi, player.getUniqueId(), amount);
+            return !(result instanceof Boolean) || (Boolean) result;
+        } catch (Throwable t) {
+            logger.warning("扣除点券失败: " + t.getMessage());
+            return false;
+        }
+    }
+
+    public double moneyBalance(OfflinePlayer player) {
+        if (!vaultAvailable() || vaultBalance == null) {
+            return 0.0D;
+        }
+        try {
+            Object result = vaultBalance.invoke(vaultEconomy, player);
+            return result instanceof Number ? ((Number) result).doubleValue() : 0.0D;
+        } catch (Throwable t) {
+            return 0.0D;
+        }
+    }
+
+    /** 扣钱。Vault 的 EconomyResponse 自带成败标记，不能只看有没有抛异常 */
+    public boolean takeMoney(OfflinePlayer player, double amount) {
+        if (!vaultAvailable() || vaultWithdraw == null || amount <= 0) {
+            return false;
+        }
+        try {
+            Object response = vaultWithdraw.invoke(vaultEconomy, player, amount);
+            if (response == null) {
+                return false;
+            }
+            try {
+                Method success = response.getClass().getMethod("transactionSuccess");
+                Object ok = success.invoke(response);
+                return ok instanceof Boolean && (Boolean) ok;
+            } catch (NoSuchMethodException e) {
+                // 极少数实现是 EconomyResponse 的父接口方法，退回按「没抛异常就算成功」
+                return true;
+            }
+        } catch (Throwable t) {
+            logger.warning("扣除金钱失败: " + t.getMessage());
+            return false;
         }
     }
 }

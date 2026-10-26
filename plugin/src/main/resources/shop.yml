@@ -1,0 +1,105 @@
+# ==========================================
+# 兑换商店（点券 / 金币的消耗口）
+# ==========================================
+# 战令发点券，商店收点券 —— 这样点券才有意义。以前点券只进不出，
+# 玩家攒到几万之后就没有继续做任务的动力了。
+#
+# 字段：
+#   icon        显示物品，必须是 Bukkit 1.12.2 的 Material 名
+#   data        物品数据值，一般 0
+#   name        显示名（支持 & 颜色码）
+#   lore        自己写的说明
+#   cost.type   points（PlayerPoints 点券）/ money（Vault 金币）
+#   cost.amount 价格，必须大于 0
+#   limit       每赛季最多兑换几次，0 = 不限
+#   permission  需要的权限，留空表示不需要
+#   slot        放在界面的哪个格子，不写则自动排
+#   rewards     兑换到的东西，写法和 reward.yml 完全一样
+#
+# 兑换顺序是「查资格 -> 预检 -> 扣款 -> 发货 -> 记次数」。
+# 任何一项写错（物品名无效、货币前置没装）都会在启动自检里点名，
+# 玩家点下去只会看到「现在兑换不了: 原因」，不会出现扣了钱没东西。
+
+title: "&8宝可梦通行证 | 兑换商店"
+size: 27
+
+items:
+  diamonds:
+    icon: DIAMOND
+    name: "&b钻石包 &7x8"
+    lore:
+      - "&7一整套建筑用的量"
+    cost:
+      type: points
+      amount: 200
+    # 每赛季最多换 3 次，防止点券全砸在一种东西上
+    limit: 3
+    rewards:
+      - "item:DIAMOND:8"
+
+  exp-bottle:
+    icon: EXP_BOTTLE
+    name: "&a经验瓶 &7x16"
+    lore:
+      - "&7喂精灵用的附魔之瓶"
+    cost:
+      type: points
+      amount: 150
+    limit: 5
+    rewards:
+      - "item:EXP_BOTTLE:16"
+
+  gapple:
+    icon: GOLDEN_APPLE
+    name: "&6金苹果 &7x2"
+    lore:
+      - "&7关键时候保命用"
+    cost:
+      type: points
+      amount: 400
+    limit: 2
+    rewards:
+      - "item:GOLDEN_APPLE:2"
+
+  gold-block:
+    icon: GOLD_BLOCK
+    name: "&e金块 &7x8"
+    lore:
+      - "&7金币也能换点硬通货"
+    cost:
+      type: money
+      amount: 5000
+    limit: 0
+    rewards:
+      - "item:GOLD_BLOCK:8"
+
+  emerald:
+    icon: EMERALD
+    name: "&2绿宝石 &7x16"
+    lore:
+      - "&7和村民交易用"
+    cost:
+      type: money
+      amount: 8000
+    limit: 0
+    rewards:
+      - "item:EMERALD:16"
+
+  # ---- 想在商店里卖精灵球 / 大师球的话，把下面这段取消注释 ----
+  # 1.12.2 的模组物品可以用原版 /give 加 "模组名:物品名" 发出去，
+  # 但物品名各版本不一样，先在服务器里手动试一次：
+  #     /give 你的名字 pixelmon:masterball 1
+  # 能发出来再把注释去掉。发不出来就说明物品名不对，别直接放进商店 ——
+  # 玩家会看到「兑换不了」而不是白扣点券（预检拦不住命令拼错的情况）。
+  #
+  # masterball:
+  #   icon: ENDER_PEARL
+  #   name: "&5大师球"
+  #   lore:
+  #     - "&7百分百捕获"
+  #   cost:
+  #     type: points
+  #     amount: 800
+  #   limit: 1
+  #   rewards:
+  #     - "command:give {player} pixelmon:masterball 1"

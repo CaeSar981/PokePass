@@ -24,9 +24,14 @@ public class PlayerProgress {
     private long totalExp;
     private String dailyKey = "";
     private String weeklyKey = "";
+    /** 这份进度属于第几赛季；0 表示老数据还没打过标，首次访问时补上 */
+    private int seasonId;
 
     private final Map<String, Integer> dailyProgress = new HashMap<String, Integer>();
     private final Map<String, Integer> weeklyProgress = new HashMap<String, Integer>();
+
+    /** 商店条目 id -> 本赛季已购买次数 */
+    private final Map<String, Integer> shopPurchases = new HashMap<String, Integer>();
 
     private final Set<Integer> claimedFree = new HashSet<Integer>();
     private final Set<Integer> claimedPremium = new HashSet<Integer>();
@@ -289,5 +294,53 @@ public class PlayerProgress {
 
     public Map<String, Integer> weeklyMap() {
         return weeklyProgress;
+    }
+
+    // ---------- 赛季 ----------
+
+    public int getSeasonId() {
+        return seasonId;
+    }
+
+    public void setSeasonId(int seasonId) {
+        if (this.seasonId != seasonId) {
+            this.seasonId = seasonId;
+            this.dirty = true;
+        }
+    }
+
+    /**
+     * 换季：等级、领取记录、周期进度、商店限购全部归零。
+     *
+     * <p>图鉴（caughtSpecies）刻意保留 —— 那是「抓过哪些物种」的事实记录，
+     * 不是本赛季成绩，清掉会让图鉴类任务永久做不完。</p>
+     */
+    public void resetForSeason(int newSeasonId) {
+        this.totalExp = 0;
+        this.dailyProgress.clear();
+        this.weeklyProgress.clear();
+        this.claimedFree.clear();
+        this.claimedPremium.clear();
+        this.shopPurchases.clear();
+        this.dailyKey = "";
+        this.weeklyKey = "";
+        this.seasonId = newSeasonId;
+        this.dirty = true;
+    }
+
+    // ---------- 商店 ----------
+
+    public int purchasesOf(String itemId) {
+        Integer value = shopPurchases.get(itemId);
+        return value == null ? 0 : value;
+    }
+
+    public void recordPurchase(String itemId) {
+        shopPurchases.put(itemId, purchasesOf(itemId) + 1);
+        dirty = true;
+    }
+
+    public Map<String, Integer> shopMap() {
+        return shopPurchases;
     }
 }

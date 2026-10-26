@@ -62,9 +62,24 @@ public class RewardBook {
                 warnings.add("reward.yml 第 " + level + " 级 " + track + " 有无法解析的奖励: " + line);
                 continue;
             }
+            // 物品名在加载时就校验。等到玩家点领取才发现的话，这一级会被整级拦下
+            // （预检机制不允许「标记已领但没到账」），结果是这一级永久领不了，很难查。
+            if (entry.getKind() == RewardEntry.Kind.ITEM && !validMaterial(entry.getPayload())) {
+                warnings.add("reward.yml 第 " + level + " 级 " + track + " 的物品名无效: "
+                        + entry.getPayload() + "（1.12.2 没有这个 Material，这一级会领不了）");
+            }
             out.add(entry);
         }
         return out;
+    }
+
+    private boolean validMaterial(String name) {
+        try {
+            org.bukkit.Material.valueOf(name.toUpperCase(java.util.Locale.ROOT));
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
     private static Integer parseInt(String text) {

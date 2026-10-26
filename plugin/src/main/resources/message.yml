@@ -8,6 +8,23 @@ quest:
 
 level-up: "&e战令等级提升! 当前 &f%level% &e级"
 
+shop:
+  bought: "&a已兑换: &f%item%"
+  empty: "&7商店还没有配置商品"
+  no-permission: "&c你没有兑换这个的权限"
+  limit: "&c本赛季已经兑换满了 (&f%limit%&c 次)"
+  unavailable: "&c现在兑换不了: %reason%"
+  partial: "&e有 %count% 项没发成功，已记录，请联系管理员补发"
+  not-enough-points: "&c点券不够，需要 &f%need%&c，你有 &f%have%"
+  not-enough-money: "&c金币不够，需要 &f%need%&c，你有 &f%have%"
+  no-points-system: "&c本服没有点券系统，暂时无法兑换"
+  no-money-system: "&c本服没有经济系统，暂时无法兑换"
+
+season:
+  rolled: "&6&l新赛季开始! &f第 %season% 赛季 &7(上赛季进度已归档，等级与领取记录已重置)"
+
+info-season: "&7第 &f%season% &7赛季 &8| &7还剩 &f%days% &7天 &8| &7点券 &e%points%"
+
 reward:
   available: "&a你有 &f%count% &a份战令奖励可以领取 &7(/zl reward)"
   claimed: "&a已领取 &f%level% &a级%track%奖励"

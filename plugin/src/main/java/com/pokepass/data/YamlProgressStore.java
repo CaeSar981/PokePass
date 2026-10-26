@@ -49,6 +49,8 @@ public class YamlProgressStore implements ProgressStore {
         PlayerProgress.decodeInts(cfg.getString("claimed-free", ""), progress.getClaimedFree());
         PlayerProgress.decodeInts(cfg.getString("claimed-premium", ""), progress.getClaimedPremium());
         PlayerProgress.decodeStrings(cfg.getString("caught", ""), progress.getCaughtSpecies());
+        progress.setSeasonId(cfg.getInt("season", 0));
+        PlayerProgress.decodeProgress(cfg.getString("shop", ""), progress.shopMap());
         progress.clearDirty();
         return progress;
     }
@@ -65,6 +67,8 @@ public class YamlProgressStore implements ProgressStore {
         cfg.set("claimed-free", PlayerProgress.encodeInts(progress.getClaimedFree()));
         cfg.set("claimed-premium", PlayerProgress.encodeInts(progress.getClaimedPremium()));
         cfg.set("caught", PlayerProgress.encodeStrings(progress.getCaughtSpecies()));
+        cfg.set("season", progress.getSeasonId());
+        cfg.set("shop", PlayerProgress.encodeProgress(progress.shopMap()));
         try {
             cfg.save(fileOf(progress.getUuid()));
             progress.clearDirty();

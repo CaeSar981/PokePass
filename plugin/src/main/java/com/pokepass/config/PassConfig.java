@@ -29,6 +29,10 @@ public class PassConfig {
     private final boolean retroClaim;
     private final int checkIntervalTicks;
 
+    private final boolean seasonEnabled;
+    private final int seasonLengthDays;
+    private final long seasonStartMillis;
+
     public PassConfig(JavaPlugin plugin) {
         FileConfiguration c = plugin.getConfig();
         this.storageType = c.getString("storage.type", "sqlite").toLowerCase(Locale.ROOT);
@@ -49,6 +53,31 @@ public class PassConfig {
 
         this.retroClaim = c.getBoolean("reward.retro-claim", true);
         this.checkIntervalTicks = Math.max(20, c.getInt("quest.check-interval-ticks", 100));
+
+        this.seasonEnabled = c.getBoolean("season.enabled", true);
+        this.seasonLengthDays = Math.max(1, c.getInt("season.length-days", 60));
+        this.seasonStartMillis = parseDate(c.getString("season.start-date", ""), c);
+    }
+
+    /** 日期只认 yyyy-MM-dd；写错就按今天算，别因为一行配置把赛季整个算飞 */
+    private long parseDate(String text, FileConfiguration c) {
+        if (text != null && !text.trim().isEmpty()) {
+            try {
+                java.text.SimpleDateFormat format = new java.text.SimpleDateFormat("yyyy-MM-dd", Locale.ROOT);
+                format.setLenient(false);
+                return format.parse(text.trim()).getTime();
+            } catch (java.text.ParseException e) {
+                c.set("season.start-date", new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+                        .format(new Date()));
+            }
+        }
+        // 没有起始日就用今天零点作为第 1 赛季起点，并写回内存里的配置
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTimeInMillis();
     }
 
     private static int clamp(int value, int min, int max) {
@@ -156,5 +185,49 @@ public class PassConfig {
         cal.setMinimalDaysInFirstWeek(4);
         cal.setTimeInMillis(now);
         return new SimpleDateFormat("yyyy-'W'ww", Locale.ROOT).format(cal.getTime());
+    }
+
+    // ---------- 赛季 ----------
+
+    public boolean seasonEnabled() {
+        return seasonEnabled;
+    }
+
+    public int seasonLengthDays() {
+        return seasonLengthDays;
+    }
+
+    /** 当前是第几赛季，1 起 */
+    public int seasonId(long now) {
+        if (!seasonEnabled) {
+            return 1;
+        }
+        long perSeason = seasonLengthDays * 86400000L;
+        long elapsed = now - seasonStartMillis;
+        if (elapsed < 0) {
+            return 1;
+        }
+        return (int) (elapsed / perSeason) + 1;
+    }
+
+    /** 本赛季结束的时刻（毫秒） */
+    public long seasonEndMillis(long now) {
+        if (!seasonEnabled) {
+            return Long.MAX_VALUE;
+        }
+        long perSeason = seasonLengthDays * 86400000L;
+        return seasonStartMillis + seasonId(now) * perSeason;
+    }
+
+    /** 距换季还剩几天（向上取整，今天结束就是 0） */
+    public int seasonDaysLeft(long now) {
+        if (!seasonEnabled) {
+            return -1;
+        }
+        long remain = seasonEndMillis(now) - now;
+        if (remain <= 0) {
+            return 0;
+        }
+        return (int) Math.ceil(remain / 86400000.0D);
     }
 }

@@ -127,3 +127,68 @@ quests:
     icon: EXP_BOTTLE
     lore:
       - "&7完成 2 次精灵特训并领取"
+
+  # ---- 以下为扩充的每日任务池 ----
+  # 任务池越大，daily.count 抽出来的组合越不重复。默认抽 3 个，
+  # 池子从 10 条扩到 16 条后，同一玩家连续几天的题基本不会撞。
+
+  d-craft:
+    name: "&6手艺人"
+    type: CraftItem
+    amount: 32
+    condition: "*"
+    exp: 110
+    icon: WORKBENCH
+    lore:
+      - "&7合成 32 个任意物品"
+
+  d-pickup:
+    name: "&f拾荒者"
+    type: PickupItem
+    amount: 40
+    condition: "*"
+    exp: 100
+    icon: HOPPER
+    lore:
+      - "&7捡起 40 个掉落物"
+
+  d-evs:
+    name: "&a努力值训练"
+    type: EVsGained
+    amount: 300
+    condition: "*"
+    exp: 180
+    icon: BLAZE_POWDER
+    lore:
+      - "&7让精灵累计获得 300 点努力值"
+
+  d-enchant:
+    name: "&d附魔师"
+    type: EnchantItem
+    amount: 2
+    condition: "*"
+    exp: 130
+    icon: ENCHANTMENT_TABLE
+    lore:
+      - "&7给装备附魔 2 次"
+
+  d-chat:
+    name: "&e活跃玩家"
+    type: Chat
+    amount: 15
+    condition: "*"
+    exp: 90
+    icon: PAPER
+    lore:
+      - "&7在聊天里说 15 句话"
+
+  d-dex:
+    name: "&b图鉴收藏家"
+    type: Pokedex
+    amount: 20
+    condition: "*"
+    exp: 200
+    icon: BOOK
+    lore:
+      - "&7图鉴里累计记录 20 种精灵"
+      - "&7（本插件自己统计，不看 Pixelmon 图鉴）"

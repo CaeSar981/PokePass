@@ -23,7 +23,7 @@ levels:
     free:
       - "item:GOLD_INGOT:8"
     premium:
-      - "item:EXPERIENCE_BOTTLE:16"
+      - "item:EXP_BOTTLE:16"
   3:
     free:
       - "item:EMERALD:5"
@@ -50,7 +50,7 @@ levels:
     free:
       - "item:EMERALD:8"
     premium:
-      - "item:EXPERIENCE_BOTTLE:32"
+      - "item:EXP_BOTTLE:32"
   8:
     free:
       - "item:IRON_BLOCK:4"

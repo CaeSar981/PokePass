@@ -44,6 +44,28 @@ public class SqliteProgressStore implements ProgressStore {
                     + "claimed_premium TEXT,"
                     + "caught TEXT)");
         }
+        // 老库升级：CREATE TABLE IF NOT EXISTS 不会给已存在的表补列，
+        // 加赛季和商店时必须自己补，否则线上库一路报 "no such column"
+        ensureColumn("season", "INTEGER NOT NULL DEFAULT 0");
+        ensureColumn("shop", "TEXT");
+    }
+
+    /** 缺列才 ALTER，已有的跳过（SQLite 不支持 ADD COLUMN IF NOT EXISTS） */
+    private void ensureColumn(String column, String type) {
+        try (Statement st = connection.createStatement();
+             ResultSet rs = st.executeQuery("PRAGMA table_info(" + TABLE + ")")) {
+            while (rs.next()) {
+                if (column.equalsIgnoreCase(rs.getString("name"))) {
+                    return;
+                }
+            }
+            try (Statement alter = connection.createStatement()) {
+                alter.executeUpdate("ALTER TABLE " + TABLE + " ADD COLUMN " + column + " " + type);
+                logger.info("数据库表已补充字段: " + column);
+            }
+        } catch (Exception e) {
+            logger.warning("补充字段 " + column + " 失败: " + e.getMessage());
+        }
     }
 
     @Override
@@ -64,6 +86,8 @@ public class SqliteProgressStore implements ProgressStore {
                 PlayerProgress.decodeInts(rs.getString("claimed_free"), progress.getClaimedFree());
                 PlayerProgress.decodeInts(rs.getString("claimed_premium"), progress.getClaimedPremium());
                 PlayerProgress.decodeStrings(rs.getString("caught"), progress.getCaughtSpecies());
+                progress.setSeasonId(rs.getInt("season"));
+                PlayerProgress.decodeProgress(rs.getString("shop"), progress.shopMap());
                 progress.clearDirty();
                 return progress;
             }
@@ -76,8 +100,8 @@ public class SqliteProgressStore implements ProgressStore {
     @Override
     public synchronized void save(PlayerProgress progress) {
         String sql = "REPLACE INTO " + TABLE + " (uuid, name, total_exp, daily_key, weekly_key,"
-                + " daily_progress, weekly_progress, claimed_free, claimed_premium, caught)"
-                + " VALUES (?,?,?,?,?,?,?,?,?,?)";
+                + " daily_progress, weekly_progress, claimed_free, claimed_premium, caught, season, shop)"
+                + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, progress.getUuid().toString());
             ps.setString(2, progress.getLastName());
@@ -89,6 +113,8 @@ public class SqliteProgressStore implements ProgressStore {
             ps.setString(8, PlayerProgress.encodeInts(progress.getClaimedFree()));
             ps.setString(9, PlayerProgress.encodeInts(progress.getClaimedPremium()));
             ps.setString(10, PlayerProgress.encodeStrings(progress.getCaughtSpecies()));
+            ps.setInt(11, progress.getSeasonId());
+            ps.setString(12, PlayerProgress.encodeProgress(progress.shopMap()));
             ps.executeUpdate();
             progress.clearDirty();
         } catch (Exception e) {

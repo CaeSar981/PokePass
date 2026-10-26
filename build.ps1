@@ -33,6 +33,8 @@ $JarName = "$PluginName-$Version.jar"
 $LibRoot = "..\_libs"
 $Cs = (Resolve-Path (Join-Path $LibRoot "CatServer-1.12.2-universal.jar")).Path
 $Pm = (Resolve-Path (Join-Path $LibRoot "Pixelmon-1.12.2-8.4.3-universal.jar")).Path
+# PlaceholderAPI is compile-time only; at runtime the server's own copy is used.
+$Papi = (Resolve-Path (Join-Path $LibRoot "PlaceholderAPI-2.11.7.jar")).Path
 
 New-Item -ItemType Directory -Force -Path $Classes, $Stubs, $Dist | Out-Null
 if (Test-Path $Classes) { [IO.Directory]::Delete((Resolve-Path $Classes).Path, $true) }
@@ -53,7 +55,7 @@ Write-Output "==> compile plugin"
 $srcFiles = @(Get-ChildItem $Src -Recurse -Filter *.java | ForEach-Object { $_.FullName })
 $srcList = Join-Path $Root "build\sources.txt"
 [IO.File]::WriteAllLines($srcList, $srcFiles)
-$cp = "$Cs;$Pm;$Stubs"
+$cp = "$Cs;$Pm;$Papi;$Stubs"
 & $Javac -encoding UTF-8 -source 1.8 -target 1.8 -nowarn -d $Classes -cp $cp "@$srcList"
 if ($LASTEXITCODE -ne 0) { Write-Output "PLUGIN COMPILE FAILED"; exit 1 }
 

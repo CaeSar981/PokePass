@@ -17,6 +17,8 @@ import com.pokepass.listener.PixelmonListener;
 import com.pokepass.quest.QuestService;
 import com.pokepass.reward.Economy;
 import com.pokepass.reward.RewardService;
+import com.pokepass.shop.ShopBook;
+import com.pokepass.shop.ShopService;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -43,6 +45,8 @@ public class PokePassPlugin extends JavaPlugin {
     private ProgressService progressService;
     private QuestService questService;
     private RewardService rewardService;
+    private ShopBook shopBook;
+    private ShopService shopService;
 
     private PixelmonListener pixelmonListener;
     private int snapshotTaskId = -1;
@@ -52,7 +56,7 @@ public class PokePassPlugin extends JavaPlugin {
     public void onEnable() {
         prepareDataFolder();
         saveDefaultConfig();
-        for (String resource : new String[]{"message.yml", "gui.yml", "reward.yml",
+        for (String resource : new String[]{"message.yml", "gui.yml", "reward.yml", "shop.yml",
                 "quest/daily.yml", "quest/weekly.yml"}) {
             saveResourceIfMissing(resource);
         }
@@ -62,6 +66,7 @@ public class PokePassPlugin extends JavaPlugin {
         questBook = new QuestBook(this);
         rewardBook = new RewardBook(this);
         guiConfig = new GuiConfig(this);
+        shopBook = new ShopBook(this);
         economy = new Economy(getLogger());
 
         if (!setupStorage()) {
@@ -72,6 +77,7 @@ public class PokePassPlugin extends JavaPlugin {
         progressService = new ProgressService(this, store);
         questService = new QuestService(this);
         rewardService = new RewardService(this);
+        shopService = new ShopService(this);
 
         pixelmonListener = new PixelmonListener(this);
         try {
@@ -89,8 +95,28 @@ public class PokePassPlugin extends JavaPlugin {
         }
 
         startTasks();
+        hookPlaceholders();
         report();
         scheduleSelfTest(command);
+    }
+
+    /**
+     * 注册 PlaceholderAPI 变量。PAPI 是软依赖：没装就跳过，
+     * 装了但版本不对也只是记一条日志，绝不能因此让整个插件起不来。
+     */
+    private void hookPlaceholders() {
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") == null) {
+            getLogger().info("未安装 PlaceholderAPI，跳过变量注册");
+            return;
+        }
+        try {
+            new com.pokepass.hook.PassPlaceholders(this).register();
+            // 别名：有些服主习惯按插件中文名写变量
+            new com.pokepass.hook.PassPlaceholders(this, "zhanling").register();
+            getLogger().info("已注册 PlaceholderAPI 变量: %pixelmontxz_*% / %zhanling_*%");
+        } catch (Throwable t) {
+            getLogger().warning("注册 PlaceholderAPI 变量失败: " + t);
+        }
     }
 
     /**
@@ -219,6 +245,7 @@ public class PokePassPlugin extends JavaPlugin {
         questBook.reload();
         rewardBook.reload();
         guiConfig.reload();
+        shopBook.reload();
         questService.reload();
         economy = new Economy(getLogger());
         report();
@@ -287,15 +314,23 @@ public class PokePassPlugin extends JavaPlugin {
         for (String warning : rewardBook.warnings()) {
             warnings.append("\n  - ").append(warning);
         }
+        for (String warning : shopBook.warnings()) {
+            warnings.append("\n  - ").append(warning);
+        }
         if (warnings.length() > 0) {
             getLogger().warning("配置有几处问题，已跳过对应条目:" + warnings);
         }
         getLogger().info("已加载任务: 每日 " + questBook.size(com.pokepass.quest.Quest.Period.DAILY)
                 + " 个 / 每周 " + questBook.size(com.pokepass.quest.Quest.Period.WEEKLY)
                 + " 个, 奖励等级 " + rewardBook.maxLevelWithReward()
+                + ", 商店商品 " + shopBook.items().size() + " 个"
                 + ", 存储 " + store.describe()
                 + ", 点券 " + (economy.pointsAvailable() ? "可用" : "未装")
                 + ", 经济 " + (economy.vaultAvailable() ? "可用" : "未装")
+                + ", 赛季 " + (passConfig.seasonEnabled()
+                        ? "第 " + passConfig.seasonId(System.currentTimeMillis())
+                        + " 赛季剩 " + passConfig.seasonDaysLeft(System.currentTimeMillis()) + " 天"
+                        : "关闭")
                 + ", 防刷 " + (questService.dedupeWindowMs() > 0
                         ? questService.dedupeWindowMs() + "ms" : "关闭"));
     }
@@ -334,6 +369,14 @@ public class PokePassPlugin extends JavaPlugin {
 
     public RewardService getRewardService() {
         return rewardService;
+    }
+
+    public ShopBook getShopBook() {
+        return shopBook;
+    }
+
+    public ShopService getShopService() {
+        return shopService;
     }
 
     public PixelmonListener getPixelmonListener() {

@@ -1,6 +1,9 @@
-# PokePass 精灵战令
+# PixelmonTXZ 精灵战令
 
-Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高级双轨奖励。
+Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高级双轨奖励 + 赛季 + 兑换商店。
+
+> 插件名（plugin.yml 的 name）是 `PixelmonTXZ`，与原版战令一致，数据目录也是
+> `plugins/PixelmonTXZ/`。仓库名沿用 PokePass。
 
 ## 命令
 
@@ -10,6 +13,7 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
 | `/zl daily` | 每日任务页 |
 | `/zl weekly` | 每周任务页 |
 | `/zl reward` | 等级奖励页（左键领免费轨，右键领高级轨） |
+| `/zl shop` | 兑换商店：用点券 / 金币换道具 |
 | `/zl claim` | 一键领取所有够等级的奖励 |
 | `/zl info` | 查看自己的等级与进度 |
 | `/zl reload` | 重载配置（admin） |
@@ -28,15 +32,81 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
 
 ## 配置文件
 
-全部在 `plugins/PokePass/`：
+全部在 `plugins/PixelmonTXZ/`：
 
-- `config.yml` — 等级曲线、周期、高级轨开关、存储方式
+- `config.yml` — 等级曲线、周期、高级轨开关、赛季长度、存储方式
 - `quest/daily.yml` — 每日任务池
 - `quest/weekly.yml` — 每周任务池
 - `reward.yml` — 每级两条轨的奖励
+- `shop.yml` — 兑换商店的商品与价格
 - `message.yml` — 全部文案
 - `gui.yml` — 三个界面的标题与尺寸
 - `pass.db` — SQLite 存档
+
+
+## 赛季
+
+`config.yml` 的 `season` 段：
+
+```yaml
+season:
+  enabled: true
+  length-days: 60
+  start-date: "2026-10-26"
+```
+
+- 换季是**懒判断**：玩家下次打开界面/登录时才比对赛季号，对不上就重置，
+  不跑全服扫表任务。
+- 重置范围：等级、总经验、免费/高级轨领取记录、每日/每周任务进度、商店限购次数。
+- **不清**图鉴（`caughtSpecies`）—— 那是「抓过哪些物种」的事实记录，
+  清掉会让图鉴类任务永久做不完。
+- `start-date` 只影响「第几赛季 / 还剩几天」的算法，改它不会重置任何数据。
+  想立刻换季，把它往前挪一个 `length-days` 即可。
+- 玩家登录时若跨赛季会收到一条提示，控制台同时打一行换季日志。
+
+## 兑换商店
+
+`shop.yml` 里的每个商品就是一个兑换项，写法与 `reward.yml` 一致：
+
+```yaml
+items:
+  diamonds:
+    icon: DIAMOND
+    name: "&b钻石包 &7x8"
+    cost: { type: points, amount: 200 }   # points=点券, money=金币
+    limit: 3                              # 每赛季限购，0 = 不限
+    rewards:
+      - "item:DIAMOND:8"
+```
+
+购买顺序是「查资格 → 预检 → 扣款 → 发货 → 记次数」：
+
+- 预检会拦住物品名写错、货币前置没装这类必然失败的情况，玩家只会看到
+  「现在兑换不了: 原因」，不会出现扣了点券没东西。
+- 扣款成功但发货失败时**不退款**（退款比丢奖励更容易写错），改为逐条写进日志，
+  管理员可按日志补发。
+- 限购次数按赛季计，换季自动清零。
+
+## PlaceholderAPI 变量
+
+装了 PlaceholderAPI 才会注册，没装完全不影响。
+
+| 变量 | 说明 |
+|---|---|
+| `%pixelmontxz_level%` | 战令等级 |
+| `%pixelmontxz_max_level%` | 等级上限 |
+| `%pixelmontxz_exp%` | 当前等级内经验 |
+| `%pixelmontxz_exp_needed%` | 升到下一级需要多少 |
+| `%pixelmontxz_exp_total%` | 累计总经验 |
+| `%pixelmontxz_percent%` | 当前等级进度 0-100 |
+| `%pixelmontxz_daily_done%` / `%pixelmontxz_daily_total%` | 每日任务进度 |
+| `%pixelmontxz_weekly_done%` / `%pixelmontxz_weekly_total%` | 每周任务进度 |
+| `%pixelmontxz_claimable%` | 可领取的奖励份数 |
+| `%pixelmontxz_premium%` | `yes` / `no` |
+| `%pixelmontxz_season%` / `%pixelmontxz_season_days%` | 赛季编号 / 距换季天数 |
+| `%pixelmontxz_caught%` | 已捕捉物种数 |
+
+另有别名 `%zhanling_*%`，写法完全一样。
 
 ## 任务类型
 
