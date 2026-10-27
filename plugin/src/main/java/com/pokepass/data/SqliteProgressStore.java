@@ -49,6 +49,8 @@ public class SqliteProgressStore implements ProgressStore {
         ensureColumn("season", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("shop", "TEXT");
         ensureColumn("pages", "TEXT");
+        ensureColumn("first_join", "INTEGER NOT NULL DEFAULT 0");
+        ensureColumn("premium", "INTEGER NOT NULL DEFAULT 0");
     }
 
     /** 缺列才 ALTER，已有的跳过（SQLite 不支持 ADD COLUMN IF NOT EXISTS） */
@@ -90,6 +92,8 @@ public class SqliteProgressStore implements ProgressStore {
                 progress.setSeasonId(rs.getInt("season"));
                 PlayerProgress.decodeProgress(rs.getString("shop"), progress.shopMap());
                 PlayerProgress.decodeInts(rs.getString("pages"), progress.getWeeklyPages());
+                progress.setFirstJoin(rs.getLong("first_join"));
+                progress.setPremiumFlag(rs.getInt("premium") != 0);
                 progress.clearDirty();
                 return progress;
             }
@@ -102,8 +106,9 @@ public class SqliteProgressStore implements ProgressStore {
     @Override
     public synchronized void save(PlayerProgress progress) {
         String sql = "REPLACE INTO " + TABLE + " (uuid, name, total_exp, daily_key, weekly_key,"
-                + " daily_progress, weekly_progress, claimed_free, claimed_premium, caught, season, shop, pages)"
-                + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                + " daily_progress, weekly_progress, claimed_free, claimed_premium, caught, season, shop, pages,"
+                + " first_join, premium)"
+                + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, progress.getUuid().toString());
             ps.setString(2, progress.getLastName());
@@ -118,6 +123,8 @@ public class SqliteProgressStore implements ProgressStore {
             ps.setInt(11, progress.getSeasonId());
             ps.setString(12, PlayerProgress.encodeProgress(progress.shopMap()));
             ps.setString(13, PlayerProgress.encodeInts(progress.getWeeklyPages()));
+            ps.setLong(14, progress.getFirstJoin());
+            ps.setInt(15, progress.isPremiumFlag() ? 1 : 0);
             ps.executeUpdate();
             progress.clearDirty();
         } catch (Exception e) {

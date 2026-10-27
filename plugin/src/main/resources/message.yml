@@ -33,6 +33,13 @@ season:
   rolled: "&6&l新赛季开始! &f第 %season% 赛季 &7(上赛季进度已归档，等级与领取记录已重置)"
 
 info-season: "&7第 &f%season% &7赛季 &8| &7还剩 &f%days% &7天 &8| &7点券 &e%points%"
+info-pages: "&7周任务 &f%unlocked%&7/&f%total% &7页 &8| &7再等 &f%days% &7天自动开一页"
+
+vip:
+  granted: "&a已把 &f%player% &a设为高级会员"
+  revoked: "&7已取消 &f%player% &7的高级会员标记"
+  self-on: "&a你已成为高级会员，任务经验与高级轨奖励已解锁"
+  self-off: "&7你的高级会员标记已被取消"
 
 reward:
   available: "&a你有 &f%count% &a份战令奖励可以领取 &7(/zl reward)"
@@ -55,6 +62,8 @@ player-only: "&c这个命令只能玩家使用"
 reload: "&a配置已重载"
 usage-give: "&c用法: /zl give <玩家> <经验>"
 usage-reset: "&c用法: /zl reset <玩家>"
+usage-addvip: "&c用法: /zl addvip <玩家> <true|false>"
+fail-boolean: "&c第三个参数只能写 true 或 false"
 admin-give: "&a已给 &f%player% &a加了 &f%amount% &a经验"
 admin-reset: "&a已重置 &f%player% &a的战令进度"
 
@@ -68,4 +77,4 @@ help:
   - "&e/zl reward &7等级奖励"
   - "&e/zl claim &7一键领取"
   - "&e/zl info &7查看自己的进度"
-  - "&8管理员: &e/zl reload&7, &e/zl give <玩家> <经验>&7, &e/zl reset <玩家>"
+  - "&8管理员: &e/zl reload&7, &e/zl give <玩家> <经验>&7, &e/zl reset <玩家>&7, &e/zl addvip <玩家> <true|false>"

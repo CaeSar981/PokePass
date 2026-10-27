@@ -38,9 +38,16 @@ public class ProgressService {
             cache.put(player.getUniqueId(), progress);
         }
         progress.setLastName(player.getName());
+        // 老数据/新档案没有首次登录时间：从这次开始算资历。
+        // 升级前就在服里的玩家也只能从今天起跑，没法凭空补出真实的首登时间。
+        boolean stamped = false;
+        if (progress.getFirstJoin() <= 0) {
+            progress.setFirstJoin(System.currentTimeMillis());
+            stamped = true;
+        }
         // 重置（换季 / 跨天）立刻落库：这类事件很少发生，但如果只在定时任务里存，
         // 玩家重置完马上崩服就会拿着旧数据回来，等级又「复活」一次
-        if (refreshPeriod(progress)) {
+        if (refreshPeriod(progress) || stamped) {
             store.save(progress);
         }
         return progress;

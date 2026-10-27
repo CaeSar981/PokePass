@@ -159,8 +159,23 @@ public class RewardService {
     }
 
     public boolean hasPremium(Player player) {
-        return plugin.getPassConfig().premiumEnabled()
-                && player.hasPermission(plugin.getPassConfig().premiumPermission());
+        return hasPremium(player, plugin.getProgressService().get(player));
+    }
+
+    /**
+     * 高级会员判定：权限 或 玩家数据里的标记。
+     *
+     * <p>两条路是有意并存的：接权限组（LuckPerms 等）的服用权限；不接权限组、
+     * 只想单独补某个玩家的服用 {@code /zl addvip} 直接写标记。</p>
+     */
+    public boolean hasPremium(Player player, PlayerProgress progress) {
+        if (!plugin.getPassConfig().premiumEnabled()) {
+            return false;
+        }
+        if (player.hasPermission(plugin.getPassConfig().premiumPermission())) {
+            return true;
+        }
+        return progress != null && progress.isPremiumFlag();
     }
 
     /** 有多少条奖励可以领（用于上线提示和界面角标） */

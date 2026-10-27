@@ -4,6 +4,7 @@ import com.pixelmonmod.pixelmon.api.events.CaptureEvent;
 import com.pixelmonmod.pixelmon.api.events.EggHatchEvent;
 import com.pixelmonmod.pixelmon.api.events.EvolveEvent;
 import com.pixelmonmod.pixelmon.api.events.ExperienceGainEvent;
+import com.pixelmonmod.pixelmon.api.events.LevelUpEvent;
 import com.pixelmonmod.pixelmon.api.events.PixelmonTradeEvent;
 import com.pixelmonmod.pixelmon.api.events.PixelmonReceivedEvent;
 import com.pixelmonmod.pixelmon.api.events.PlayerBattleEndedEvent;
@@ -96,6 +97,24 @@ public class PixelmonListener {
             return;
         }
         plugin.getQuestService().advance(player, QuestType.EXPERIENCE_GAIN, "*", event.getExperience());
+    }
+
+    @SubscribeEvent
+    public void onLevelUp(LevelUpEvent event) {
+        // 每次升级都会发这个事件，只有冲上 100 级那一级才算「养满一只」
+        if (event.newLevel < 100) {
+            return;
+        }
+        Player player = bukkit(event.player);
+        if (player == null) {
+            return;
+        }
+        String species = null;
+        try {
+            species = speciesOf(event.pokemon == null ? null : event.pokemon.getPokemon());
+        } catch (Throwable ignored) {
+        }
+        plugin.getQuestService().advance(player, QuestType.POKEMON_MAX_LEVEL, species, 1);
     }
 
     @SubscribeEvent

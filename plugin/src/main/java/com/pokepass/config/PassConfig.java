@@ -20,6 +20,7 @@ public class PassConfig {
 
     private final boolean premiumEnabled;
     private final String premiumPermission;
+    private final double premiumExpMultiplier;
 
     private final int dailyResetHour;
     private final int dailyCount;
@@ -28,6 +29,8 @@ public class PassConfig {
     private final boolean weeklyPagesEnabled;
     private final int weeklyFreePages;
     private final int weeklyPageCost;
+    /** 每累计多少天自动多解锁一页（原版 Day）；0 = 关闭 */
+    private final int weeklyUnlockDays;
 
     private final boolean retroClaim;
     private final int checkIntervalTicks;
@@ -47,6 +50,8 @@ public class PassConfig {
 
         this.premiumEnabled = c.getBoolean("pass.premium.enabled", true);
         this.premiumPermission = c.getString("pass.premium.permission", "pokepass.premium");
+        this.premiumExpMultiplier = clampDouble(
+                c.getDouble("pass.premium.exp-multiplier", 2.0D), 1.0D, 100.0D);
 
         this.dailyResetHour = clamp(c.getInt("daily.reset-hour", 0), 0, 23);
         this.dailyCount = Math.max(0, c.getInt("daily.count", 3));
@@ -57,6 +62,7 @@ public class PassConfig {
         this.weeklyPagesEnabled = c.getBoolean("weekly.pages.enabled", true);
         this.weeklyFreePages = Math.max(1, c.getInt("weekly.pages.free-pages", 1));
         this.weeklyPageCost = Math.max(0, c.getInt("weekly.pages.cost-points", 10));
+        this.weeklyUnlockDays = Math.max(0, c.getInt("weekly.pages.unlock-days", 7));
 
         this.retroClaim = c.getBoolean("reward.retro-claim", true);
         this.checkIntervalTicks = Math.max(20, c.getInt("quest.check-interval-ticks", 100));
@@ -88,6 +94,10 @@ public class PassConfig {
     }
 
     private static int clamp(int value, int min, int max) {
+        return value < min ? min : (value > max ? max : value);
+    }
+
+    private static double clampDouble(double value, double min, double max) {
         return value < min ? min : (value > max ? max : value);
     }
 
@@ -140,6 +150,16 @@ public class PassConfig {
     /** 解锁一页要多少点券 */
     public int weeklyPageCost() {
         return weeklyPageCost;
+    }
+
+    /** 每累计多少天自动多解锁一页周任务；0 = 这个功能关掉 */
+    public int weeklyUnlockDays() {
+        return weeklyUnlockDays;
+    }
+
+    /** 高级会员的经验倍率（原版 Double）。1 = 不翻倍 */
+    public double premiumExpMultiplier() {
+        return premiumExpMultiplier;
     }
 
     /** 这一页是否本来就免费（含 pages 整体关掉的情况） */

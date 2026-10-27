@@ -1,7 +1,7 @@
 # PixelmonTXZ 精灵战令
 
 Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高级双轨奖励 + 赛季 + 兑换商店
-+ 周任务分页解锁。
++ 周任务分页解锁（点券 / 按天自动）。
 
 > 插件名（plugin.yml 的 name）是 `PixelmonTXZ`，与原版战令一致，数据目录也是
 > `plugins/PixelmonTXZ/`。仓库名沿用 PokePass。
@@ -20,6 +20,7 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
 | `/zl reload` | 重载配置（admin） |
 | `/zl give <玩家> <经验>` | 加战令经验（admin） |
 | `/zl reset <玩家>` | 清空战令进度（admin） |
+| `/zl addvip <玩家> <true\|false>` | 手动开关高级会员标记，支持离线玩家（admin） |
 | `/zl selftest` | 自检：事件总线、任务表、存储读写（admin） |
 | `/zl progress <玩家> <training\|working> [数量]` | 给其它插件用的进度入口（控制台 / admin），玩家自己调会被拒 |
 
@@ -28,7 +29,8 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
 ## 权限
 
 - `pokepass.use` — 基础使用，默认所有人
-- `pokepass.premium` — 解锁高级轨奖励，默认不给（用权限插件卖）
+- `pokepass.premium` — 解锁高级轨奖励 + 任务经验倍率，默认不给（用权限插件卖）；
+  也可以用 `/zl addvip <玩家> true` 直接写进玩家数据，两条路是「或」的关系
 - `pokepass.admin` — 管理命令，默认 OP
 
 ## 配置文件
@@ -56,6 +58,7 @@ weekly:
     enabled: true       # 关掉 = 所有页都免费
     free-pages: 1       # 前几页免费
     cost-points: 10     # 解锁一页花多少点券
+    unlock-days: 7      # 原版 Day：首次登录后每满 7 天自动多开一页，0 = 关闭
 ```
 
 ```yaml
@@ -69,8 +72,11 @@ weekly:
 
 - 还有待解锁的页才显示，全解锁后自动消失
 - 点一下先扣点券再解锁，扣不动就不解锁（不会出现白送）
-- 解锁是**赛季级**的，换季一起清空
+- 解锁是**赛季级**的：花点券买的页换季清空，靠资历（`unlock-days`）白拿的页不花点券，
+  但同样按「当前资历」重新算，所以老玩家换季后依旧是那几页
 - 没解锁的页，里面的任务既不会显示，事件也不会推进
+- 资历（首次登录时间）**不随赛季重置**；升级插件前就在服里的玩家没有这个时间戳，
+  从升级后第一次登录开始算
 
 ## 任务类型
 
@@ -201,6 +207,7 @@ items:
 | `InteractEntity` | NPC 名 / `*` | NPC 交互 |
 | `PixelmonTrade` | `*` | 精灵交易 |
 | `DeleteItem` | 物品名 | 消耗物品（接入时用） |
+| `PokemonMaxLevel` | 物种英文名 / `*` | 某只精灵**升到 100 级**的那一刻（原版同名类型） |
 | `TrainingFinish` | `*` | 完成一次精灵特训（PokeTraining 领取时自动派命令推进） |
 | `WorkFinish` | `*` | 完成一次精灵打工（PokeTools 领取成功时自动推进） |
 
@@ -209,8 +216,26 @@ items:
 | type | 条件写法 | 说明 |
 |---|---|---|
 | `Pokedex` | `*` | 捕捉过的不同物种数（插件自己统计） |
-| `MaxLevelPokemon` | `目标等级`（如 `100`） | 队伍里满级精灵数量 |
+| `MaxLevelPokemon` | `目标等级`（如 `100`） | 队伍里满级精灵数量（原版拼作 `MaxLevelPokmon`，两个都认） |
 | `CheckItem` | 物品名 | 背包持有数量 |
+
+## 高级会员
+
+`config.yml` 的 `pass.premium` 段：
+
+```yaml
+pass:
+  premium:
+    enabled: true
+    permission: pokepass.premium
+    exp-multiplier: 2     # 原版 Double：做任务拿到的经验 x2
+```
+
+- 判定是「有权限 **或** 玩家数据标记为高级」，任一条满足即生效。
+- 数据标记由 `/zl addvip <玩家> <true|false>` 写（支持离线玩家，按 usercache 找 UUID，
+  不发网络请求）。标记不随换季清空。
+- 倍率只乘**任务奖励经验**，`/zl give` 是管理员调数值，不乘。
+- 高级轨奖励本身仍按同一开关判定，所以关掉 `enabled` 等于全服都按免费轨。
 
 ## 奖励写法
 
@@ -233,7 +258,7 @@ levels:
 ./build.sh no-deploy   # 只构建，产物在 dist/
 ```
 
-jar 名由 `plugin.yml` 的 `name + version` 推导（当前 `dist/PixelmonTXZ-1.2.0.jar`），
+jar 名由 `plugin.yml` 的 `name + version` 推导（当前 `dist/PixelmonTXZ-1.3.0.jar`），
 版本号只有那一处来源。依赖三个 jar 全部取自工作区根的 `../_libs/`：CatServer、
 Pixelmon 8.4.3、PlaceholderAPI（编译期用，运行期用服务端自带的）。
 `stub/` 下是 NMS 编译期桩，只为让 javac 能解析 Pixelmon 的签名，不进 jar。

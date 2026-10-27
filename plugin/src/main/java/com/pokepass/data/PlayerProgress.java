@@ -47,6 +47,22 @@ public class PlayerProgress {
     /** 自己统计的已捕捉物种（图鉴任务用它，不依赖 Pixelmon 的图鉴存储） */
     private final Set<String> caughtSpecies = new LinkedHashSet<String>();
 
+    /**
+     * 首次进入本服的时间（毫秒）。0 表示老数据还没打过标，加载时补上当前时间。
+     *
+     * <p>周任务「按天数自动解锁一页」用它算累计天数（原版的 {@code Day}）。
+     * 不随换季重置——那是玩家在服里的资历，不是本赛季成绩。</p>
+     */
+    private long firstJoin;
+
+    /**
+     * 高级会员标记（{@code /zl addvip} 写的）。
+     *
+     * <p>和权限是「或」的关系：权限插件给的是通用授权，这个标记是给不接权限组、
+     * 只想手动补一个玩家的服用的。同样不随换季清空。</p>
+     */
+    private boolean premiumFlag;
+
     private boolean dirty;
 
     public PlayerProgress(UUID uuid) {
@@ -322,6 +338,9 @@ public class PlayerProgress {
      *
      * <p>图鉴（caughtSpecies）刻意保留 —— 那是「抓过哪些物种」的事实记录，
      * 不是本赛季成绩，清掉会让图鉴类任务永久做不完。</p>
+     *
+     * <p>同理保留 {@code firstJoin}（玩家资历，决定自动解锁几页）和
+     * {@code premiumFlag}（玩家买的高级会员，跟赛季无关）。</p>
      */
     public void resetForSeason(int newSeasonId) {
         this.totalExp = 0;
@@ -338,6 +357,28 @@ public class PlayerProgress {
     }
 
     // ---------- 周任务页 ----------
+
+    public long getFirstJoin() {
+        return firstJoin;
+    }
+
+    public void setFirstJoin(long firstJoin) {
+        if (this.firstJoin != firstJoin) {
+            this.firstJoin = firstJoin;
+            this.dirty = true;
+        }
+    }
+
+    public boolean isPremiumFlag() {
+        return premiumFlag;
+    }
+
+    public void setPremiumFlag(boolean premiumFlag) {
+        if (this.premiumFlag != premiumFlag) {
+            this.premiumFlag = premiumFlag;
+            this.dirty = true;
+        }
+    }
 
     /** 除了免费页之外，额外解锁了第几页 */
     public boolean isPageUnlocked(int page) {

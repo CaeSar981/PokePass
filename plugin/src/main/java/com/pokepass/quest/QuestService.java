@@ -95,13 +95,66 @@ public class QuestService {
      */
     public Set<Integer> unlockedPages(PlayerProgress progress) {
         int total = plugin.getQuestBook().pages(Quest.Period.WEEKLY);
+        // 「免费页」有两个来源：配置里白送的 free-pages，以及按在服天数攒出来的页。
+        // 两者取并集，玩家买过的页再叠上去，这样口径只有一处，界面和事件推进不会打架。
+        int freeThrough = plugin.getPassConfig().weeklyFreePages() + pagesByDays(progress);
         Set<Integer> unlocked = new HashSet<Integer>();
         for (int page = 1; page <= total; page++) {
-            if (plugin.getPassConfig().isPageFree(page) || progress.isPageUnlocked(page)) {
+            if (plugin.getPassConfig().isPageFree(page)
+                    || page <= freeThrough
+                    || progress.isPageUnlocked(page)) {
                 unlocked.add(page);
             }
         }
         return unlocked;
+    }
+
+    /**
+     * 靠「在服资历」白送的页数（原版 {@code Day: 7} 的语义：每满 N 天自动多开一页）。
+     *
+     * <p>算的是首次登录到现在的累计天数，不随赛季重置；{@code unlock-days: 0} 关闭。</p>
+     */
+    public int pagesByDays(PlayerProgress progress) {
+        if (!plugin.getPassConfig().weeklyPagesEnabled()) {
+            return 0;
+        }
+        int days = plugin.getPassConfig().weeklyUnlockDays();
+        if (days <= 0) {
+            return 0;
+        }
+        long first = progress.getFirstJoin();
+        if (first <= 0) {
+            return 0;
+        }
+        long elapsed = System.currentTimeMillis() - first;
+        if (elapsed <= 0) {
+            return 0;
+        }
+        return (int) (elapsed / (days * 86400000L));
+    }
+
+    /**
+     * 还有几天会靠资历自动开出下一页；-1 表示不会（功能关闭、已无待解锁页、或首登时间未知）。
+     *
+     * <p>只给玩家提示用，不参与解锁判定。</p>
+     */
+    public int daysToNextFreePage(PlayerProgress progress) {
+        if (!plugin.getPassConfig().weeklyPagesEnabled() || plugin.getPassConfig().weeklyUnlockDays() <= 0) {
+            return -1;
+        }
+        int total = plugin.getQuestBook().pages(Quest.Period.WEEKLY);
+        int unlockDays = plugin.getPassConfig().weeklyUnlockDays();
+        int granted = plugin.getPassConfig().weeklyFreePages() + pagesByDays(progress);
+        if (granted >= total || progress.getFirstJoin() <= 0) {
+            return -1;
+        }
+        long nextAt = progress.getFirstJoin() + (long) (granted - plugin.getPassConfig().weeklyFreePages() + 1)
+                * unlockDays * 86400000L;
+        long remain = nextAt - System.currentTimeMillis();
+        if (remain <= 0) {
+            return 0;
+        }
+        return (int) Math.ceil(remain / 86400000.0D);
     }
 
     /**
@@ -115,11 +168,11 @@ public class QuestService {
         if (!plugin.getPassConfig().weeklyPagesEnabled()) {
             return -1;
         }
+        Set<Integer> unlocked = unlockedPages(progress);
         for (int page = 1; page <= total; page++) {
-            if (progress.isPageUnlocked(page) || plugin.getPassConfig().isPageFree(page)) {
-                continue;
+            if (!unlocked.contains(page)) {
+                return page;
             }
-            return page;
         }
         return -1;
     }
@@ -199,10 +252,15 @@ public class QuestService {
 
     private void complete(Player player, PlayerProgress progress, Quest quest) {
         int beforeLevel = progress.getLevel(plugin.getPassConfig());
-        boolean levelUp = progress.addExp(quest.getExp(), plugin.getPassConfig());
+        // 高级会员经验倍率（原版 Double）。倍率只影响「做任务拿到的经验」，
+        // /zl give 是管理员调数值，不乘，否则补一次经验还要先算半天。
+        double multiplier = plugin.getRewardService().hasPremium(player, progress)
+                ? plugin.getPassConfig().premiumExpMultiplier() : 1.0D;
+        int gained = (int) Math.round(quest.getExp() * multiplier);
+        boolean levelUp = progress.addExp(gained, plugin.getPassConfig());
         player.sendMessage(plugin.getLang().msg("quest.complete", "&a任务完成: &f%quest% &7(+%exp% 经验)")
                 .replace("%quest%", quest.getName())
-                .replace("%exp%", String.valueOf(quest.getExp())));
+                .replace("%exp%", String.valueOf(gained)));
         if (levelUp) {
             int level = progress.getLevel(plugin.getPassConfig());
             player.sendMessage(plugin.getLang().msg("level-up", "&e战令等级提升! 当前 &f%level% &e级")

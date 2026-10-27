@@ -80,11 +80,7 @@ public class PokePassPlugin extends JavaPlugin {
         shopService = new ShopService(this);
 
         pixelmonListener = new PixelmonListener(this);
-        try {
-            Pixelmon.EVENT_BUS.register(pixelmonListener);
-        } catch (Throwable t) {
-            getLogger().severe("注册 Pixelmon 事件失败，精灵相关任务将不可用: " + t);
-        }
+        registerPixelmonEvents();
         getServer().getPluginManager().registerEvents(new BukkitListener(this), this);
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
 
@@ -280,6 +276,44 @@ public class PokePassPlugin extends JavaPlugin {
         }
     }
 
+    /**
+     * 把 Pixelmon 事件的监听器挂到 Forge 总线上。
+     *
+     * <p>Forge 的 {@code EventBus.register} 会去问 {@code Loader.activeModContainer()}「这个对象
+     * 是哪个 mod 的」。Bukkit 插件不是 mod，此刻 activeModContainer 是 null，Forge 就会打一条
+     * 「Unable to determine registrant mod … critical error」的红字 —— 实际上注册仍然成功，
+     * 只是每次启动都吓人一跳。注册期间临时把 activeModContainer 指到 pixelmon，
+     * 日志就干净了；失败也不影响功能，照旧降级成「精灵任务不可用」的提示。</p>
+     */
+    private void registerPixelmonEvents() {
+        Object previous = null;
+        boolean switched = false;
+        try {
+            previous = net.minecraftforge.fml.common.Loader.instance().activeModContainer();
+            net.minecraftforge.fml.common.ModContainer pixelmon =
+                    net.minecraftforge.fml.common.Loader.instance().getIndexedModList().get("pixelmon");
+            if (pixelmon != null) {
+                net.minecraftforge.fml.common.Loader.instance().setActiveModContainer(pixelmon);
+                switched = true;
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            Pixelmon.EVENT_BUS.register(pixelmonListener);
+        } catch (Throwable t) {
+            getLogger().severe("注册 Pixelmon 事件失败，精灵相关任务将不可用: " + t);
+        } finally {
+            if (switched) {
+                try {
+                    net.minecraftforge.fml.common.Loader.instance().setActiveModContainer(
+                            (net.minecraftforge.fml.common.ModContainer) previous);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+    }
+
+    /** 定时任务：快照扫描 + 脏数据落库 */
     private void startTasks() {
         snapshotTaskId = getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
             @Override

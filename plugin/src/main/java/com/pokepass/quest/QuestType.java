@@ -41,6 +41,13 @@ public enum QuestType {
     WORKING("WorkFinish", false),
 
     MAX_LEVEL_POKEMON("MaxLevelPokemon", true),
+    /**
+     * 某只精灵升到 100 级的那一刻记一次（原版叫 PokemonMaxLevel）。
+     *
+     * <p>和 {@link #MAX_LEVEL_POKEMON} 不是一回事：那个数的是背包里满级精灵的数量，
+     * 这个是「养成」动作，一只精灵一生只会触发一次，所以走事件而不是快照。</p>
+     */
+    POKEMON_MAX_LEVEL("PokemonMaxLevel", false),
     POKEDEX("Pokedex", true),
     /** 图鉴完成度百分比（0~100），amount 写目标百分比 */
     POKEDEX_PERCENT("PokedexPercent", true),
@@ -92,6 +99,15 @@ public enum QuestType {
         }
         if ("Pokedex".equalsIgnoreCase(key) || "Dex".equalsIgnoreCase(key)) {
             return POKEDEX;
+        }
+        // 原版配置里这条写成 MaxLevelPokmon（少一个 e），搬老配置过来必须认；
+        // MaxLevel 是玩家手写时最常用的简写
+        if ("MaxLevelPokmon".equalsIgnoreCase(key) || "MaxLevel".equalsIgnoreCase(key)
+                || "满级数量".equals(key)) {
+            return MAX_LEVEL_POKEMON;
+        }
+        if ("PokemonMaxLevel".equalsIgnoreCase(key) || "精灵满级".equals(key)) {
+            return POKEMON_MAX_LEVEL;
         }
         if ("PokedexPercent".equalsIgnoreCase(key) || "DexPercent".equalsIgnoreCase(key)
                 || "PokerusSpread".equalsIgnoreCase(key) || "图鉴百分比".equals(key)) {

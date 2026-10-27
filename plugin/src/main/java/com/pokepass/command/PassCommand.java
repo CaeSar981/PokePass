@@ -56,6 +56,9 @@ public class PassCommand implements CommandExecutor, TabCompleter {
         if ("reset".equals(sub)) {
             return adminReset(sender, args);
         }
+        if ("addvip".equals(sub) || "vip".equals(sub)) {
+            return adminVip(sender, args);
+        }
         if ("selftest".equals(sub)) {
             if (!sender.hasPermission("pokepass.admin")) {
                 sender.sendMessage(plugin.getLang().msg("no-permission", "&c你没有权限"));
@@ -105,6 +108,18 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                         .replace("%season%", String.valueOf(plugin.getPassConfig().seasonId(now)))
                         .replace("%days%", String.valueOf(plugin.getPassConfig().seasonDaysLeft(now)))
                         .replace("%points%", String.valueOf(plugin.getEconomy().lookPoints(player))));
+            }
+            // 周任务页：告诉玩家「现在能看几页 / 还能靠资历白拿几页」，
+            // 不然点券解锁按钮旁边没有任何信息，玩家会以为只能花钱
+            if (plugin.getPassConfig().weeklyPagesEnabled()) {
+                int total = plugin.getQuestBook().pages(Quest.Period.WEEKLY);
+                int unlocked = plugin.getQuestService().unlockedPages(progress).size();
+                int daysLeft = plugin.getQuestService().daysToNextFreePage(progress);
+                player.sendMessage(plugin.getLang().msg("info-pages",
+                                "&7周任务 &f%unlocked%&7/&f%total% &7页 &8| &7再等 &f%days% &7天自动开一页")
+                        .replace("%unlocked%", String.valueOf(unlocked))
+                        .replace("%total%", String.valueOf(total))
+                        .replace("%days%", daysLeft < 0 ? "—" : String.valueOf(daysLeft)));
             }
         } else {
             help(sender);
@@ -171,8 +186,112 @@ public class PassCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    /** 自检：事件总线是否真的注册上了、任务表、存储读写 */
     /**
+     * {@code /zl addvip <玩家> <true|false>}——原版战令的同名命令。
+     *
+     * <p>写的是玩家数据里的标记，和权限 {@code pokepass.premium} 是「或」的关系：
+     * 接权限组的服照旧用权限卖，这里给不想动权限组的服留一个手动开关。
+     * 支持未在线玩家（改完下次上线生效）。</p>
+     */
+    private boolean adminVip(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("pokepass.admin")) {
+            sender.sendMessage(plugin.getLang().msg("no-permission", "&c你没有权限"));
+            return true;
+        }
+        if (args.length < 3) {
+            sender.sendMessage(plugin.getLang().msg("usage-addvip", "&c用法: /zl addvip <玩家> <true|false>"));
+            return true;
+        }
+        Boolean value = parseBoolean(args[2]);
+        if (value == null) {
+            sender.sendMessage(plugin.getLang().msg("fail-boolean", "&c第三个参数只能写 true 或 false"));
+            return true;
+        }
+        Player target = Bukkit.getPlayerExact(args[1]);
+        PlayerProgress progress;
+        String name = args[1];
+        if (target != null) {
+            progress = plugin.getProgressService().get(target);
+            name = target.getName();
+        } else {
+            // 只用本地 usercache 找，不走 Mojang 接口：这条命令会卡在主线程，
+            // 为了改一个 flag 去发一次 HTTP 不值得
+            java.util.UUID uuid = findOfflineUuid(args[1]);
+            if (uuid == null) {
+                sender.sendMessage(plugin.getLang().msg("no-player", "&c找不到这个玩家"));
+                return true;
+            }
+            progress = plugin.getProgressService().store().load(uuid);
+            progress.setLastName(name);
+        }
+        progress.setPremiumFlag(value);
+        progress.touch();
+        plugin.getProgressService().store().save(progress);
+        sender.sendMessage(plugin.getLang().msg(value ? "vip.granted"
+                        : "vip.revoked",
+                        value ? "&a已把 &f%player% &a设为高级会员" : "&7已取消 &f%player% &7的高级会员标记")
+                .replace("%player%", name));
+        if (target != null) {
+            target.sendMessage(plugin.getLang().msg(value ? "vip.self-on" : "vip.self-off",
+                    value ? "&a你已成为高级会员，任务经验与高级轨奖励已解锁"
+                            : "&7你的高级会员标记已被取消"));
+        }
+        return true;
+    }
+
+    private Boolean parseBoolean(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String text = raw.trim();
+        if ("true".equalsIgnoreCase(text) || "1".equals(text) || "是".equals(text)) {
+            return Boolean.TRUE;
+        }
+        if ("false".equalsIgnoreCase(text) || "0".equals(text) || "否".equals(text)) {
+            return Boolean.FALSE;
+        }
+        return null;
+    }
+
+    /** 在本地玩家缓存里按名字找 UUID；找不到返回 null */
+    private java.util.UUID findOfflineUuid(String name) {
+        for (org.bukkit.OfflinePlayer offline : Bukkit.getOfflinePlayers()) {
+            if (offline.getName() != null && offline.getName().equalsIgnoreCase(name)) {
+                return offline.getUniqueId();
+            }
+        }
+        return findInUserCache(name);
+    }
+
+    /**
+     * 兜底：读服务端根目录的 {@code usercache.json}。
+     *
+     * <p>{@code Bukkit.getOfflinePlayers()} 只认识「有 playerdata 的玩家」，玩家删过档、
+     * 换过世界名、或者只在别的子服玩过，这里就查不到。usercache 是 Mojang 名字 → UUID
+     * 的本地副本，不联网、格式稳定，正好补这个缺口。</p>
+     */
+    private java.util.UUID findInUserCache(String name) {
+        java.io.File file = new java.io.File("usercache.json");
+        if (!file.isFile()) {
+            return null;
+        }
+        try {
+            String json = new String(java.nio.file.Files.readAllBytes(file.toPath()),
+                    java.nio.charset.Charset.forName("UTF-8"));
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
+                            "\"name\"\\s*:\\s*\"" + java.util.regex.Pattern.quote(name)
+                                    + "\"\\s*,\\s*\"uuid\"\\s*:\\s*\"([0-9a-fA-F-]{36})\"",
+                            java.util.regex.Pattern.CASE_INSENSITIVE)
+                    .matcher(json);
+            if (matcher.find()) {
+                return java.util.UUID.fromString(matcher.group(1));
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    /** 自检：事件总线是否真的注册上了、任务表、存储读写 */    /**
      * 启动自检入口：插件 enable 后延迟调一次，用控制台身份跑同一套检查。
      * 这样每次重启就能在日志里看到配置有没有写坏，不必等人上号敲命令。
      */
@@ -260,12 +379,47 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                 }
             }
             int cost = plugin.getPassConfig().weeklyPageCost();
+            int unlockDays = plugin.getPassConfig().weeklyUnlockDays();
             sender.sendMessage((empty.length() == 0 ? "§a[OK] " : "§c[FAIL] ")
                     + "§f周任务分页: 共 " + totalPages + " 页，免费 "
                     + plugin.getPassConfig().weeklyFreePages() + " 页，解锁一页 "
                     + (cost > 0 ? cost + " 点券" : "免费（0 点券）")
+                    + "，天数解锁 " + (unlockDays > 0 ? "每 " + unlockDays + " 天 +1 页" : "关闭")
                     + (empty.length() == 0 ? "" : "；空页: " + empty + "（玩家解锁后看不到任务）"));
         }
+
+        // 按天数自动解锁：用合成档案跑一遍算法，不依赖有人在线。
+        // 首登时间往前推满一个周期，应当比现在多开一页；全新档案应当一页都不多开。
+        int unlockDays = plugin.getPassConfig().weeklyUnlockDays();
+        if (unlockDays > 0 && plugin.getPassConfig().weeklyPagesEnabled()) {
+            int free = plugin.getPassConfig().weeklyFreePages();
+            int total = plugin.getQuestBook().pages(Quest.Period.WEEKLY);
+            PlayerProgress old = new PlayerProgress(new java.util.UUID(0L, 0L));
+            old.setFirstJoin(System.currentTimeMillis() - unlockDays * 86400000L - 60000L);
+            int bonus = plugin.getQuestService().pagesByDays(old);
+            int expected = Math.min(total, free + bonus);
+            int actual = plugin.getQuestService().unlockedPages(old).size();
+            boolean freshOk = plugin.getQuestService().pagesByDays(
+                    new PlayerProgress(new java.util.UUID(0L, 1L))) == 0;
+            boolean ok = bonus >= 1 && actual == expected && freshOk;
+            sender.sendMessage((ok ? "§a[OK] " : "§c[FAIL] ")
+                    + "§f按天解锁: 首登满 " + unlockDays + " 天 -> 多开 " + bonus
+                    + " 页，实际解锁 " + actual + "/" + total + " 页（应为 " + expected
+                    + "），新档案不多开=" + freshOk);
+        } else {
+            sender.sendMessage("§e[--] §f按天解锁: 未启用（unlock-days 为 0 或分页关闭）");
+        }
+
+        // 高级会员：倍率和「权限 / 数据标记」两条判定路径都在这条里报出来，
+        // 免得线上出现「买了 VIP 但经验没翻倍」时还要去翻配置确认哪一路没生效
+        double multiplier = plugin.getPassConfig().premiumExpMultiplier();
+        String multiplierText = multiplier == Math.floor(multiplier)
+                ? String.valueOf((int) multiplier) : String.valueOf(multiplier);
+        sender.sendMessage((plugin.getPassConfig().premiumEnabled() ? "§a[OK] " : "§e[--] ")
+                + "§f高级会员: " + (plugin.getPassConfig().premiumEnabled()
+                ? "任务经验 x" + multiplierText + "，凭权限 "
+                + plugin.getPassConfig().premiumPermission() + " 或 /zl addvip 标记"
+                : "未启用（所有人按免费轨，经验不翻倍）"));
 
         // 奖励覆盖度：奖励表没配到的等级，玩家点开奖励页只会看到「无奖励」
         int maxLevel = plugin.getPassConfig().maxLevel();
@@ -389,7 +543,7 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                 "&e/zl shop &7兑换商店（点券/金币）",
                 "&e/zl claim &7一键领取",
                 "&e/zl info &7查看自己的进度",
-                "&8管理员: &e/zl reload&7, &e/zl give <玩家> <经验>&7, &e/zl reset <玩家>"))) {
+                "&8管理员: &e/zl reload&7, &e/zl give <玩家> <经验>&7, &e/zl reset <玩家>&7, &e/zl addvip <玩家> <true|false>"))) {
             sender.sendMessage(line);
         }
     }
@@ -401,7 +555,7 @@ public class PassCommand implements CommandExecutor, TabCompleter {
             List<String> subs = new ArrayList<String>(Arrays.asList(
                     "daily", "weekly", "reward", "shop", "claim", "info", "help"));
             if (sender.hasPermission("pokepass.admin")) {
-                subs.addAll(Arrays.asList("reload", "give", "reset", "selftest", "progress"));
+                subs.addAll(Arrays.asList("reload", "give", "reset", "addvip", "selftest", "progress"));
             }
             for (String sub : subs) {
                 if (sub.startsWith(args[0].toLowerCase())) {
@@ -409,10 +563,17 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                 }
             }
         } else if (args.length == 2 && (args[0].equalsIgnoreCase("give")
-                || args[0].equalsIgnoreCase("reset") || args[0].equalsIgnoreCase("progress"))) {
+                || args[0].equalsIgnoreCase("reset") || args[0].equalsIgnoreCase("progress")
+                || args[0].equalsIgnoreCase("addvip"))) {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 if (player.getName().toLowerCase().startsWith(args[1].toLowerCase())) {
                     out.add(player.getName());
+                }
+            }
+        } else if (args.length == 3 && args[0].equalsIgnoreCase("addvip")) {
+            for (String value : new String[]{"true", "false"}) {
+                if (value.startsWith(args[2].toLowerCase())) {
+                    out.add(value);
                 }
             }
         } else if (args.length == 3 && args[0].equalsIgnoreCase("progress")) {

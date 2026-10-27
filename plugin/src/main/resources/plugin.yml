@@ -1,6 +1,6 @@
 name: PixelmonTXZ
 main: com.pokepass.PokePassPlugin
-version: 1.2.0
+version: 1.3.0
 author: CaeSar981
 description: Pixelmon battle pass - daily/weekly quests, levels, dual-track rewards
 softdepend:
