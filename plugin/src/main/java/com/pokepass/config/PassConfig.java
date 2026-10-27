@@ -25,6 +25,9 @@ public class PassConfig {
     private final int dailyCount;
     private final int weeklyCount;
     private final String weeklyResetDay;
+    private final boolean weeklyPagesEnabled;
+    private final int weeklyFreePages;
+    private final int weeklyPageCost;
 
     private final boolean retroClaim;
     private final int checkIntervalTicks;
@@ -50,6 +53,10 @@ public class PassConfig {
 
         this.weeklyResetDay = c.getString("weekly.reset-day", "MONDAY").toUpperCase(Locale.ROOT);
         this.weeklyCount = Math.max(0, c.getInt("weekly.count", 0));
+
+        this.weeklyPagesEnabled = c.getBoolean("weekly.pages.enabled", true);
+        this.weeklyFreePages = Math.max(1, c.getInt("weekly.pages.free-pages", 1));
+        this.weeklyPageCost = Math.max(0, c.getInt("weekly.pages.cost-points", 10));
 
         this.retroClaim = c.getBoolean("reward.retro-claim", true);
         this.checkIntervalTicks = Math.max(20, c.getInt("quest.check-interval-ticks", 100));
@@ -118,6 +125,26 @@ public class PassConfig {
 
     public String weeklyResetDay() {
         return weeklyResetDay;
+    }
+
+    /** 周任务分页解锁是否开启；关掉等于所有页都免费 */
+    public boolean weeklyPagesEnabled() {
+        return weeklyPagesEnabled;
+    }
+
+    /** 免费开放的页数（默认 1，即第 1 页不用买） */
+    public int weeklyFreePages() {
+        return weeklyFreePages;
+    }
+
+    /** 解锁一页要多少点券 */
+    public int weeklyPageCost() {
+        return weeklyPageCost;
+    }
+
+    /** 这一页是否本来就免费（含 pages 整体关掉的情况） */
+    public boolean isPageFree(int page) {
+        return !weeklyPagesEnabled || page <= weeklyFreePages;
     }
 
     public boolean retroClaim() {

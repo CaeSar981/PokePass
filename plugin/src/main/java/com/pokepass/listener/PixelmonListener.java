@@ -5,6 +5,7 @@ import com.pixelmonmod.pixelmon.api.events.EggHatchEvent;
 import com.pixelmonmod.pixelmon.api.events.EvolveEvent;
 import com.pixelmonmod.pixelmon.api.events.ExperienceGainEvent;
 import com.pixelmonmod.pixelmon.api.events.PixelmonTradeEvent;
+import com.pixelmonmod.pixelmon.api.events.PixelmonReceivedEvent;
 import com.pixelmonmod.pixelmon.api.events.PlayerBattleEndedEvent;
 import com.pixelmonmod.pixelmon.api.events.npc.NPCEvent;
 import com.pixelmonmod.pixelmon.api.events.pokemon.EVsGainedEvent;
@@ -126,6 +127,26 @@ public class PixelmonListener {
         if (second != null) {
             plugin.getQuestService().advance(second, QuestType.TRADE, "*", 1);
         }
+    }
+
+    /**
+     * 化石机复活。
+     *
+     * <p>Pixelmon 没有单独的「复活完成」事件，所有「玩家收到一只精灵」都走
+     * {@link PixelmonReceivedEvent}，用 receiveType 区分来源。这里只认 Fossil，
+     * 免得初始精灵、命令发放、交换也一并算成复活化石。</p>
+     */
+    @SubscribeEvent
+    public void onPokemonReceived(PixelmonReceivedEvent event) {
+        if (event.receiveType != com.pixelmonmod.pixelmon.api.enums.ReceiveType.Fossil) {
+            return;
+        }
+        Player player = bukkit(event.player);
+        if (player == null) {
+            return;
+        }
+        plugin.getQuestService().advance(player, QuestType.RECEIVED_FOSSIL,
+                speciesOf(event.pokemon), 1);
     }
 
     @SubscribeEvent

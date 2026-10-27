@@ -5,7 +5,7 @@
 #  与其他五个插件（PokeTraining / PokeTools / PokeMarket / PokeRanked /
 #  PokeUtils）保持同一套约定：
 #    · 版本号只在 plugin/src/main/resources/plugin.yml 写一次，jar 名由
-#      `name + version` 推导（PixelmonTXZ-1.1.0.jar），不带 -SNAPSHOT、不带日期；
+#      `name + version` 推导（PixelmonTXZ-1.2.0.jar），不带 -SNAPSHOT、不带日期；
 #    · 依赖统一取工作区根的 ../_libs/；
 #    · 部署规则走 _tools/deploy.sh（服在跑就不覆盖）。
 #

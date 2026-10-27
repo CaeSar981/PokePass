@@ -28,6 +28,8 @@ public enum QuestType {
     CHAT("Chat", false),
     NPC_INTERACT("InteractEntity", false),
     TRADE("PixelmonTrade", false),
+    /** 化石机复活出一只精灵（PixelmonReceivedEvent 里 receiveType == Fossil） */
+    RECEIVED_FOSSIL("ReceivedFossil", false),
 
     /**
      * 跨插件联动：这两个不是 Bukkit 事件驱动的，由特训 / 打工插件在「领取成功」时
@@ -40,6 +42,10 @@ public enum QuestType {
 
     MAX_LEVEL_POKEMON("MaxLevelPokemon", true),
     POKEDEX("Pokedex", true),
+    /** 图鉴完成度百分比（0~100），amount 写目标百分比 */
+    POKEDEX_PERCENT("PokedexPercent", true),
+    /** 玩家本人等级（原版叫 LevelUp，语义是「人物等级达到多少」），快照型 */
+    PLAYER_LEVEL("LevelUp", true),
     CHECK_ITEM("CheckItem", true),
     DELETE_ITEM("DeleteItem", false);
 
@@ -86,6 +92,18 @@ public enum QuestType {
         }
         if ("Pokedex".equalsIgnoreCase(key) || "Dex".equalsIgnoreCase(key)) {
             return POKEDEX;
+        }
+        if ("PokedexPercent".equalsIgnoreCase(key) || "DexPercent".equalsIgnoreCase(key)
+                || "PokerusSpread".equalsIgnoreCase(key) || "图鉴百分比".equals(key)) {
+            return POKEDEX_PERCENT;
+        }
+        if ("Fossil".equalsIgnoreCase(key) || "ReceivedFossil".equalsIgnoreCase(key)
+                || "化石".equals(key)) {
+            return RECEIVED_FOSSIL;
+        }
+        if ("LevelUp".equalsIgnoreCase(key) || "PlayerLevel".equalsIgnoreCase(key)
+                || "人物等级".equals(key)) {
+            return PLAYER_LEVEL;
         }
         if ("Training".equalsIgnoreCase(key) || "Train".equalsIgnoreCase(key)
                 || "特训".equals(key)) {

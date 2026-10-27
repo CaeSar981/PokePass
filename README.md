@@ -1,6 +1,7 @@
 # PixelmonTXZ 精灵战令
 
-Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高级双轨奖励 + 赛季 + 兑换商店。
+Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高级双轨奖励 + 赛季 + 兑换商店
++ 周任务分页解锁。
 
 > 插件名（plugin.yml 的 name）是 `PixelmonTXZ`，与原版战令一致，数据目录也是
 > `plugins/PixelmonTXZ/`。仓库名沿用 PokePass。
@@ -34,15 +35,60 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
 
 全部在 `plugins/PixelmonTXZ/`：
 
-- `config.yml` — 等级曲线、周期、高级轨开关、赛季长度、存储方式
+- `config.yml` — 等级曲线、周期、高级轨开关、赛季长度、周任务分页、存储方式
 - `quest/daily.yml` — 每日任务池
-- `quest/weekly.yml` — 每周任务池
-- `reward.yml` — 每级两条轨的奖励
+- `quest/weekly.yml` — 每周任务池（可写 `page: 2` 分页）
+- `reward.yml` — 每级两条轨的奖励（默认配满 1~50 级）
 - `shop.yml` — 兑换商店的商品与价格
 - `message.yml` — 全部文案
 - `gui.yml` — 界面自定义（见下）
 - `pass.db` — SQLite 存档
 
+
+## 周任务分页解锁
+
+照原版战令的做法：周任务可以分成多页，第 1 页免费，第 2 页起要用点券买。
+
+```yaml
+# config.yml
+weekly:
+  pages:
+    enabled: true       # 关掉 = 所有页都免费
+    free-pages: 1       # 前几页免费
+    cost-points: 10     # 解锁一页花多少点券
+```
+
+```yaml
+# quest/weekly.yml
+  w-fossil:
+    name: "&5化石研究者"
+    page: 2             # 不写就是第 1 页
+```
+
+每周任务界面底部会多出一个「解锁第 N 页」按钮（gui.yml 的 `weekly.buttons.unlock`）：
+
+- 还有待解锁的页才显示，全解锁后自动消失
+- 点一下先扣点券再解锁，扣不动就不解锁（不会出现白送）
+- 解锁是**赛季级**的，换季一起清空
+- 没解锁的页，里面的任务既不会显示，事件也不会推进
+
+## 任务类型
+
+| 类型 | 说明 |
+|---|---|
+| `Capture` | 捕捉（`condition` 填物种名，`*` 不限） |
+| `BattleWin` | 对战胜利（`condition` 填 `Player` / `Trainer` / `WildPokemon`） |
+| `Evolve` / `EggHatch` / `PixelmonTrade` | 进化 / 孵蛋 / 交换 |
+| `ReceivedFossil` | 化石机复活（`condition` 可填物种名） |
+| `ExperienceGain` / `EVsGained` | 精灵经验累计 / 努力值累计 |
+| `BlockBreak` / `CraftItem` / `PickupItem` / `PlayerFish` / `EnchantItem` | 原版行为 |
+| `Chat` / `InteractEntity` | 聊天关键字 / NPC 交互 |
+| `Pokedex` | 图鉴物种数（快照） |
+| `PokedexPercent` | 图鉴完成度百分比，`amount: 30` = 30%（快照） |
+| `LevelUp` | 人物等级，`amount: 30` = 升到 30 级（快照） |
+| `MaxLevelPokemon` | 背包里满级精灵数（快照） |
+| `CheckItem` / `DeleteItem` | 持有 / 消耗物品（快照 / 事件） |
+| `TrainingFinish` / `WorkFinish` | 完成一次特训 / 打工（跨插件，走命令推进） |
 
 ## 界面自定义
 
@@ -187,7 +233,7 @@ levels:
 ./build.sh no-deploy   # 只构建，产物在 dist/
 ```
 
-jar 名由 `plugin.yml` 的 `name + version` 推导（当前 `dist/PixelmonTXZ-1.1.0.jar`），
+jar 名由 `plugin.yml` 的 `name + version` 推导（当前 `dist/PixelmonTXZ-1.2.0.jar`），
 版本号只有那一处来源。依赖三个 jar 全部取自工作区根的 `../_libs/`：CatServer、
 Pixelmon 8.4.3、PlaceholderAPI（编译期用，运行期用服务端自带的）。
 `stub/` 下是 NMS 编译期桩，只为让 javac 能解析 Pixelmon 的签名，不进 jar。

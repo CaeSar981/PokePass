@@ -12,6 +12,14 @@
 #   money:500               Vault 金币（没装就跳过并提示）
 #
 # 提示：物品名必须是 Bukkit 1.12.2 的 Material 名，全大写。
+#       附魔金苹果在 1.12.2 不是独立物品，要写成 item:GOLDEN_APPLE:数量:1
+#       （1.13 才拆出 ENCHANTED_GOLDEN_APPLE，写那个 1.12.2 识别不了）。
+#
+# 默认配满 1~50 级，与 config.yml 的 pass.max-level 对齐。曲线：
+#   免费轨   每 5 级额外给一次金币，每 10 级额外给下界之星，
+#            普通物品的量每 10 级上一个台阶（11~20 一档、21~30 再一档）
+#   高级轨   点券 500 起步，每级 +40，满级 2100；每 5 级再附一份金苹果
+# 改曲线只需要动这里的数字，不用改代码。
 
 levels:
   1:
@@ -68,3 +76,231 @@ levels:
     premium:
       - "points:500"
       - "item:NETHER_STAR:1"
+
+  # ---------- 11~20 级 ----------
+  11:
+    free:
+      - "item:DIAMOND:3"
+    premium:
+      - "points:540"
+  12:
+    free:
+      - "item:EMERALD:5"
+    premium:
+      - "points:580"
+  13:
+    free:
+      - "item:GOLD_INGOT:16"
+    premium:
+      - "points:620"
+  14:
+    free:
+      - "item:EXP_BOTTLE:16"
+    premium:
+      - "points:660"
+  15:
+    free:
+      - "item:IRON_BLOCK:4"
+      - "money:500"
+    premium:
+      - "points:700"
+      - "item:GOLDEN_APPLE:3"
+  16:
+    free:
+      - "item:DIAMOND_BLOCK:1"
+    premium:
+      - "points:740"
+  17:
+    free:
+      - "item:GOLDEN_APPLE:2"
+    premium:
+      - "points:780"
+  18:
+    free:
+      - "item:GOLDEN_APPLE:1:1"
+    premium:
+      - "points:820"
+  19:
+    free:
+      - "item:DIAMOND:3"
+    premium:
+      - "points:860"
+  20:
+    free:
+      - "item:EMERALD:5"
+      - "money:600"
+      - "item:NETHER_STAR:2"
+    premium:
+      - "points:900"
+      - "item:GOLDEN_APPLE:4"
+
+  # ---------- 21~30 级 ----------
+  21:
+    free:
+      - "item:GOLD_INGOT:24"
+    premium:
+      - "points:940"
+  22:
+    free:
+      - "item:EXP_BOTTLE:32"
+    premium:
+      - "points:980"
+  23:
+    free:
+      - "item:IRON_BLOCK:6"
+    premium:
+      - "points:1020"
+  24:
+    free:
+      - "item:DIAMOND_BLOCK:2"
+    premium:
+      - "points:1060"
+  25:
+    free:
+      - "item:GOLDEN_APPLE:3"
+      - "money:700"
+    premium:
+      - "points:1100"
+      - "item:GOLDEN_APPLE:4"
+  26:
+    free:
+      - "item:GOLDEN_APPLE:2:1"
+    premium:
+      - "points:1140"
+  27:
+    free:
+      - "item:DIAMOND:6"
+    premium:
+      - "points:1180"
+  28:
+    free:
+      - "item:EMERALD:9"
+    premium:
+      - "points:1220"
+  29:
+    free:
+      - "item:GOLD_INGOT:24"
+    premium:
+      - "points:1260"
+  30:
+    free:
+      - "item:EXP_BOTTLE:32"
+      - "money:800"
+      - "item:NETHER_STAR:3"
+    premium:
+      - "points:1300"
+      - "item:GOLDEN_APPLE:5"
+
+  # ---------- 31~40 级 ----------
+  31:
+    free:
+      - "item:IRON_BLOCK:8"
+    premium:
+      - "points:1340"
+  32:
+    free:
+      - "item:DIAMOND_BLOCK:3"
+    premium:
+      - "points:1380"
+  33:
+    free:
+      - "item:GOLDEN_APPLE:4"
+    premium:
+      - "points:1420"
+  34:
+    free:
+      - "item:GOLDEN_APPLE:3:1"
+    premium:
+      - "points:1460"
+  35:
+    free:
+      - "item:DIAMOND:9"
+      - "money:900"
+    premium:
+      - "points:1500"
+      - "item:GOLDEN_APPLE:5"
+  36:
+    free:
+      - "item:EMERALD:13"
+    premium:
+      - "points:1540"
+  37:
+    free:
+      - "item:GOLD_INGOT:32"
+    premium:
+      - "points:1580"
+  38:
+    free:
+      - "item:EXP_BOTTLE:48"
+    premium:
+      - "points:1620"
+  39:
+    free:
+      - "item:IRON_BLOCK:8"
+    premium:
+      - "points:1660"
+  40:
+    free:
+      - "item:DIAMOND_BLOCK:3"
+      - "money:1000"
+      - "item:NETHER_STAR:4"
+    premium:
+      - "points:1700"
+      - "item:GOLDEN_APPLE:6"
+
+  # ---------- 41~50 级 ----------
+  41:
+    free:
+      - "item:GOLDEN_APPLE:5"
+    premium:
+      - "points:1740"
+  42:
+    free:
+      - "item:GOLDEN_APPLE:4:1"
+    premium:
+      - "points:1780"
+  43:
+    free:
+      - "item:DIAMOND:12"
+    premium:
+      - "points:1820"
+  44:
+    free:
+      - "item:EMERALD:17"
+    premium:
+      - "points:1860"
+  45:
+    free:
+      - "item:GOLD_INGOT:40"
+      - "money:1100"
+    premium:
+      - "points:1900"
+      - "item:GOLDEN_APPLE:6"
+  46:
+    free:
+      - "item:EXP_BOTTLE:64"
+    premium:
+      - "points:1940"
+  47:
+    free:
+      - "item:IRON_BLOCK:10"
+    premium:
+      - "points:1980"
+  48:
+    free:
+      - "item:DIAMOND_BLOCK:4"
+    premium:
+      - "points:2020"
+  49:
+    free:
+      - "item:GOLDEN_APPLE:5"
+    premium:
+      - "points:2060"
+  50:
+    free:
+      - "item:GOLDEN_APPLE:4:1"
+      - "money:1200"
+      - "item:NETHER_STAR:5"
+    premium:
+      - "points:2100"
+      - "item:GOLDEN_APPLE:7"

@@ -48,6 +48,7 @@ public class SqliteProgressStore implements ProgressStore {
         // 加赛季和商店时必须自己补，否则线上库一路报 "no such column"
         ensureColumn("season", "INTEGER NOT NULL DEFAULT 0");
         ensureColumn("shop", "TEXT");
+        ensureColumn("pages", "TEXT");
     }
 
     /** 缺列才 ALTER，已有的跳过（SQLite 不支持 ADD COLUMN IF NOT EXISTS） */
@@ -88,6 +89,7 @@ public class SqliteProgressStore implements ProgressStore {
                 PlayerProgress.decodeStrings(rs.getString("caught"), progress.getCaughtSpecies());
                 progress.setSeasonId(rs.getInt("season"));
                 PlayerProgress.decodeProgress(rs.getString("shop"), progress.shopMap());
+                PlayerProgress.decodeInts(rs.getString("pages"), progress.getWeeklyPages());
                 progress.clearDirty();
                 return progress;
             }
@@ -100,8 +102,8 @@ public class SqliteProgressStore implements ProgressStore {
     @Override
     public synchronized void save(PlayerProgress progress) {
         String sql = "REPLACE INTO " + TABLE + " (uuid, name, total_exp, daily_key, weekly_key,"
-                + " daily_progress, weekly_progress, claimed_free, claimed_premium, caught, season, shop)"
-                + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)";
+                + " daily_progress, weekly_progress, claimed_free, claimed_premium, caught, season, shop, pages)"
+                + " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setString(1, progress.getUuid().toString());
             ps.setString(2, progress.getLastName());
@@ -115,6 +117,7 @@ public class SqliteProgressStore implements ProgressStore {
             ps.setString(10, PlayerProgress.encodeStrings(progress.getCaughtSpecies()));
             ps.setInt(11, progress.getSeasonId());
             ps.setString(12, PlayerProgress.encodeProgress(progress.shopMap()));
+            ps.setString(13, PlayerProgress.encodeInts(progress.getWeeklyPages()));
             ps.executeUpdate();
             progress.clearDirty();
         } catch (Exception e) {

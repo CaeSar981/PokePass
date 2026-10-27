@@ -52,6 +52,30 @@ public class RewardBook {
             free.put(level, readList(section.getStringList("free"), level, "free"));
             premium.put(level, readList(section.getStringList("premium"), level, "premium"));
         }
+        checkCoverage();
+    }
+
+    /**
+     * 等级上限与奖励表对不上时提前报出来。
+     *
+     * <p>超出 max-level 的条目玩家永远到不了（升级到顶就停了），
+     * 而没配到的等级点开奖励页只会看到「无奖励」—— 两种都是配置写漏，
+     * 放在加载期告警比等玩家反馈省事。</p>
+     */
+    private void checkCoverage() {
+        int maxLevel = Math.max(1, plugin.getConfig().getInt("pass.max-level", 50));
+        for (Integer level : free.keySet()) {
+            if (level > maxLevel) {
+                warnings.add("reward.yml 第 " + level + " 级超出 pass.max-level(" + maxLevel
+                        + ")，这一级玩家永远达不到");
+            }
+        }
+        for (int level = 1; level <= maxLevel; level++) {
+            if (free(level).isEmpty() && premium(level).isEmpty()) {
+                warnings.add("reward.yml 第 " + level + " 级没有任何奖励（free/premium 都是空），"
+                        + "奖励页这一级会显示「无奖励」");
+            }
+        }
     }
 
     private List<RewardEntry> readList(List<String> raw, int level, String track) {
@@ -110,6 +134,17 @@ public class RewardBook {
             max = Math.max(max, level);
         }
         return max;
+    }
+
+    /** 真正配了奖励的等级个数（不是最高等级，中间留空不算） */
+    public int coveredLevels() {
+        int count = 0;
+        for (Integer level : free.keySet()) {
+            if (!free(level).isEmpty() || !premium(level).isEmpty()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     public List<String> warnings() {

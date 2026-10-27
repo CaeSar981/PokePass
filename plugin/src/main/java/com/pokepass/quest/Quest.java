@@ -39,6 +39,8 @@ public class Quest {
     private final List<String> lore;
     /** 精灵头像图标（任务 yml 的 sprite 键）；null 表示用普通材质 */
     private final org.bukkit.inventory.ItemStack spriteIcon;
+    /** 周任务属于第几页（1 起）；每日任务恒为 1，写在这里只是让两边同一套模型 */
+    private final int page;
 
     public Quest(String id, Period period, String name, QuestType type, int amount,
                  List<String> conditions, int exp, Material icon, short data, List<String> lore) {
@@ -48,6 +50,12 @@ public class Quest {
     public Quest(String id, Period period, String name, QuestType type, int amount,
                  List<String> conditions, int exp, Material icon, short data, List<String> lore,
                  org.bukkit.inventory.ItemStack spriteIcon) {
+        this(id, period, name, type, amount, conditions, exp, icon, data, lore, spriteIcon, 1);
+    }
+
+    public Quest(String id, Period period, String name, QuestType type, int amount,
+                 List<String> conditions, int exp, Material icon, short data, List<String> lore,
+                 org.bukkit.inventory.ItemStack spriteIcon, int page) {
         this.id = id;
         this.period = period;
         this.name = name;
@@ -59,6 +67,7 @@ public class Quest {
         this.data = data;
         this.lore = lore;
         this.spriteIcon = spriteIcon;
+        this.page = Math.max(1, page);
     }
 
     public String getId() {
@@ -96,6 +105,11 @@ public class Quest {
     /** 精灵头像图标；null 表示用普通材质渲染 */
     public org.bukkit.inventory.ItemStack getSpriteIcon() {
         return spriteIcon;
+    }
+
+    /** 周任务所在页（1 起）。每日任务恒为 1 */
+    public int getPage() {
+        return page;
     }
 
     public List<String> getLore() {

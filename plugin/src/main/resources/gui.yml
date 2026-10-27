@@ -9,6 +9,7 @@
 #    size     界面行数，9 的倍数，9~54
 #    filler   铺底填充物，"材质" 或 "材质:数据值"
 #    buttons  按钮：slot / material / data / name / enabled
+#             （weekly 多一个 unlock：解锁下一页的按钮，没有可解锁页时自动隐藏）
 #    decor    装饰物：slot / material / data / name / lore / glow
 #             与按钮或内容区撞槽位会被跳过
 #    content  （仅 daily / weekly / reward）内容槽位区，支持 "10-16,19-25" 写法
@@ -168,6 +169,12 @@ weekly:
       slot: 50
       material: SPECTRAL_ARROW
       name: "&a下一页 »"
+    # 周任务分页解锁：没有可解锁的页时这个按钮不会出现
+    unlock:
+      slot: 49
+      material: TRIPWIRE_HOOK
+      name: "&a&l解锁第 %next_page% 页 &7(%page_cost% 点券)"
+      enabled: true
     close:
       slot: 53
       material: BARRIER
@@ -198,7 +205,6 @@ weekly:
     - { slot: 44, material: STAINED_GLASS_PANE, data: 4 }
     - { slot: 46, material: STAINED_GLASS_PANE, data: 4 }
     - { slot: 47, material: STAINED_GLASS_PANE, data: 4 }
-    - { slot: 49, material: STAINED_GLASS_PANE, data: 4 }
     - { slot: 51, material: STAINED_GLASS_PANE, data: 4 }
     - { slot: 52, material: STAINED_GLASS_PANE, data: 4 }
 

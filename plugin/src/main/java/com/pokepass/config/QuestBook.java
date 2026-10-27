@@ -89,7 +89,8 @@ public class QuestBook {
                     icon,
                     (short) section.getInt("data", 0),
                     lore,
-                    spriteIcon));
+                    spriteIcon,
+                    section.getInt("page", 1)));
         }
     }
 
@@ -97,9 +98,25 @@ public class QuestBook {
         return Collections.unmodifiableList(period == Quest.Period.DAILY ? daily : weekly);
     }
 
-    /** 该玩家本周期可见的任务（含抽样） */
+    /** 该玩家本周期可见的任务（含抽样），不按页过滤 */
     public List<Quest> forPlayer(Quest.Period period, UUID uuid, String periodKey, int limit) {
-        List<Quest> source = new ArrayList<Quest>(all(period));
+        return forPlayer(period, uuid, periodKey, limit, null);
+    }
+
+    /**
+     * 该玩家本周期可见的任务。
+     *
+     * @param unlockedPages 允许出现的页；null 表示不按页过滤（每日任务用 null）。
+     *                      过滤发生在抽样之前，这样「抽 3 个」抽的是他能做的那几页。
+     */
+    public List<Quest> forPlayer(Quest.Period period, UUID uuid, String periodKey, int limit,
+                                 java.util.Set<Integer> unlockedPages) {
+        List<Quest> source = new ArrayList<Quest>();
+        for (Quest quest : all(period)) {
+            if (unlockedPages == null || unlockedPages.contains(quest.getPage())) {
+                source.add(quest);
+            }
+        }
         if (source.isEmpty()) {
             return source;
         }
@@ -108,6 +125,15 @@ public class QuestBook {
         }
         Collections.shuffle(source, new Random(("pokepass:" + period + ":" + periodKey + ":" + uuid).hashCode()));
         return new ArrayList<Quest>(source.subList(0, limit));
+    }
+
+    /** 这个周期一共有几页（按配置里最大的 page 算，至少 1） */
+    public int pages(Quest.Period period) {
+        int max = 1;
+        for (Quest quest : all(period)) {
+            max = Math.max(max, quest.getPage());
+        }
+        return max;
     }
 
     public Quest find(Quest.Period period, String id) {

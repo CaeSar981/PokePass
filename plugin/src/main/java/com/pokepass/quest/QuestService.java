@@ -10,8 +10,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,7 +36,7 @@ public class QuestService {
      */
     private static final Set<QuestType> DEDUPE = EnumSet.of(
             QuestType.CAPTURE, QuestType.BATTLE_WIN, QuestType.EVOLVE,
-            QuestType.EGG_HATCH, QuestType.TRADE);
+            QuestType.EGG_HATCH, QuestType.TRADE, QuestType.RECEIVED_FOSSIL);
 
     private final PokePassPlugin plugin;
     /** 玩家 -> 各类型最后一次记账的时间戳（毫秒） */
@@ -42,6 +44,8 @@ public class QuestService {
             new HashMap<UUID, Map<QuestType, Long>>();
     /** 去重窗口；0 表示关闭 */
     private long dedupeWindowMs;
+    /** 全图鉴物种数缓存（0 = 还没算过） */
+    private int totalSpecies;
 
     public QuestService(PokePassPlugin plugin) {
         this.plugin = plugin;
@@ -83,13 +87,73 @@ public class QuestService {
         return false;
     }
 
+    /**
+     * 当前玩家能看到的周任务页：免费页 + 自己用点券买过的页。
+     *
+     * <p>页面集合只在这里算一次，任务抽样、界面渲染、进度推进都用同一份口径，
+     * 免得出现「界面上看到但事件推不动」这类不一致。</p>
+     */
+    public Set<Integer> unlockedPages(PlayerProgress progress) {
+        int total = plugin.getQuestBook().pages(Quest.Period.WEEKLY);
+        Set<Integer> unlocked = new HashSet<Integer>();
+        for (int page = 1; page <= total; page++) {
+            if (plugin.getPassConfig().isPageFree(page) || progress.isPageUnlocked(page)) {
+                unlocked.add(page);
+            }
+        }
+        return unlocked;
+    }
+
+    /**
+     * 下一张待解锁的页；没有可解锁的就返回 -1。
+     *
+     * <p>只返回「紧挨着的下一页」——跳过中间页会让「解锁了第 3 页但第 2 页是空的」
+     * 这种配置错误变成玩家投诉。</p>
+     */
+    public int nextLockedPage(PlayerProgress progress) {
+        int total = plugin.getQuestBook().pages(Quest.Period.WEEKLY);
+        if (!plugin.getPassConfig().weeklyPagesEnabled()) {
+            return -1;
+        }
+        for (int page = 1; page <= total; page++) {
+            if (progress.isPageUnlocked(page) || plugin.getPassConfig().isPageFree(page)) {
+                continue;
+            }
+            return page;
+        }
+        return -1;
+    }
+
+    /** 某一页里有多少任务（界面提示用） */
+    public int pageSize(int page) {
+        int count = 0;
+        for (Quest quest : plugin.getQuestBook().all(Quest.Period.WEEKLY)) {
+            if (quest.getPage() == page) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     /** 当前玩家本周期可见的全部任务（每日 + 每周） */
     public List<Quest> visible(Player player, PlayerProgress progress) {
         List<Quest> out = new ArrayList<Quest>();
         out.addAll(plugin.getQuestBook().forPlayer(Quest.Period.DAILY, player.getUniqueId(),
                 progress.getDailyKey(), plugin.getPassConfig().dailyCount()));
         out.addAll(plugin.getQuestBook().forPlayer(Quest.Period.WEEKLY, player.getUniqueId(),
-                progress.getWeeklyKey(), plugin.getPassConfig().weeklyCount()));
+                progress.getWeeklyKey(), plugin.getPassConfig().weeklyCount(), unlockedPages(progress)));
+        return out;
+    }
+
+    /** 已解锁但一条任务都没有的页（配置写漏时给自检用） */
+    public List<Integer> emptyUnlockedPages(PlayerProgress progress) {
+        List<Integer> out = new ArrayList<Integer>();
+        for (int page : unlockedPages(progress)) {
+            if (pageSize(page) == 0) {
+                out.add(page);
+            }
+        }
+        Collections.sort(out);
         return out;
     }
 
@@ -182,6 +246,11 @@ public class QuestService {
                 return progressCaught(player);
             case CHECK_ITEM:
                 return countItem(player, quest);
+            case PLAYER_LEVEL:
+                // 人物等级直接读，不做任何加成
+                return Math.max(0, player.getLevel());
+            case POKEDEX_PERCENT:
+                return pokedexPercent(player);
             default:
                 return -1;
         }
@@ -215,6 +284,42 @@ public class QuestService {
     private int progressCaught(Player player) {
         PlayerProgress progress = plugin.getProgressService().get(player);
         return progress.getCaughtSpecies().size();
+    }
+
+    /** 图鉴完成度百分比（0~100），分母只算图鉴号 > 0 的正常物种 */
+    private int pokedexPercent(Player player) {
+        int total = totalSpecies();
+        if (total <= 0) {
+            return 0;
+        }
+        int caught = Math.min(progressCaught(player), total);
+        return caught * 100 / total;
+    }
+
+    /**
+     * 全图鉴物种数。
+     *
+     * <p>EnumSpecies 里除了正常物种还有 MissingNo / Egg 这些占位项，
+     * 直接用 values().length 会让分母虚高、百分比永远到不了 100，
+     * 所以只数图鉴号大于 0 的。第一次算完缓存，枚举不会变。</p>
+     */
+    private int totalSpecies() {
+        if (totalSpecies > 0) {
+            return totalSpecies;
+        }
+        try {
+            int count = 0;
+            for (com.pixelmonmod.pixelmon.enums.EnumSpecies species
+                    : com.pixelmonmod.pixelmon.enums.EnumSpecies.values()) {
+                if (species.getNationalPokedexInteger() > 0) {
+                    count++;
+                }
+            }
+            totalSpecies = count;
+        } catch (Throwable ignored) {
+            totalSpecies = 0;
+        }
+        return totalSpecies;
     }
 
     private int countItem(Player player, Quest quest) {

@@ -153,7 +153,11 @@ public final class PassMenus {
                     .replace("%daily_max%", String.valueOf(visibleCount(Quest.Period.DAILY)))
                     .replace("%weekly_done%", String.valueOf(doneCount(Quest.Period.WEEKLY)))
                     .replace("%weekly_max%", String.valueOf(visibleCount(Quest.Period.WEEKLY)))
-                    .replace("%points%", String.valueOf(plugin.getEconomy().lookPoints(player)));
+                    .replace("%points%", String.valueOf(plugin.getEconomy().lookPoints(player)))
+                    .replace("%next_page%", String.valueOf(
+                            plugin.getQuestService().nextLockedPage(progress)))
+                    .replace("%page_cost%", String.valueOf(
+                            plugin.getPassConfig().weeklyPageCost()));
         }
 
         protected int doneCount(Quest.Period period) {
@@ -389,9 +393,18 @@ public final class PassMenus {
             ButtonSpec nextSpec = button("next");
             ButtonSpec closeSpec = button("close");
 
+            PlayerProgress progress = plugin.getProgressService().get(player);
+            // 周任务分页：只有周任务页才有「解锁」按钮，且有下一张待解锁的页时才显示
+            ButtonSpec unlockSpec = period == Quest.Period.WEEKLY ? button("unlock") : null;
+            int nextPage = unlockSpec != null && unlockSpec.enabled()
+                    ? plugin.getQuestService().nextLockedPage(progress) : -1;
+
             List<Integer> used = new ArrayList<Integer>();
             for (int slot : slots) {
                 used.add(slot);
+            }
+            if (nextPage > 0) {
+                used.add(unlockSpec.slot());
             }
             for (ButtonSpec spec : Arrays.asList(backSpec, prevSpec, nextSpec, closeSpec)) {
                 if (spec.enabled()) {
@@ -404,7 +417,6 @@ public final class PassMenus {
             }
             fillFrame(inventory, skip);
 
-            PlayerProgress progress = plugin.getProgressService().get(player);
             List<Quest> quests = new ArrayList<Quest>();
             for (Quest quest : plugin.getQuestService().visible(player, progress)) {
                 if (quest.getPeriod() == period) {
@@ -437,8 +449,30 @@ public final class PassMenus {
             if (closeSpec.enabled()) {
                 inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec, applyVars(closeSpec.name()), null));
             }
+            if (nextPage > 0) {
+                inventory.setItem(unlockSpec.slot(),
+                        GuiKit.glow(GuiKit.item(unlockSpec, applyVars(unlockSpec.name()),
+                                unlockLore(nextPage))));
+            }
 
-            renderDecor();
+            renderDecor(nextPage > 0 ? new int[]{unlockSpec.slot()} : new int[0]);
+        }
+
+        /** 解锁按钮的说明：买的是哪一页、多几条任务、要多少点券、身上有多少 */
+        private List<String> unlockLore(int page) {
+            int cost = plugin.getPassConfig().weeklyPageCost();
+            int have = plugin.getEconomy().lookPoints(player);
+            List<String> lore = new ArrayList<String>();
+            lore.add(plugin.getLang().plain("weekly.unlock-lore-page", "&7解锁第 &f%page% &7页，多出 &f%count% &7条任务")
+                    .replace("%page%", String.valueOf(page))
+                    .replace("%count%", String.valueOf(plugin.getQuestService().pageSize(page))));
+            if (cost > 0) {
+                lore.add(plugin.getLang().plain("weekly.unlock-lore-cost", "&e花费 &f%cost% &e点券 &8(你有 %have%)")
+                        .replace("%cost%", String.valueOf(cost))
+                        .replace("%have%", String.valueOf(have)));
+            }
+            lore.add(plugin.getLang().plain("weekly.unlock-lore-season", "&7解锁本赛季有效，换季后重置"));
+            return lore;
         }
 
         private ItemStack renderQuest(Quest quest, PlayerProgress progress) {
@@ -467,6 +501,53 @@ public final class PassMenus {
             return item;
         }
 
+        /**
+         * 扣点券解锁下一页。
+         *
+         * <p>顺序是「先扣钱再解锁」还是「先解锁再扣钱」都怕中途失败：
+         * 扣钱成功但解锁失败 = 玩家白扣；解锁成功但扣钱失败 = 白送。
+         * 这里选先扣钱：扣款接口本身是原子的，扣完立刻写内存再落库，
+         * 落库失败只影响重启后（最坏是重复买一次，不会凭空多给内容）。</p>
+         */
+        private void unlockNextPage() {
+            PlayerProgress progress = plugin.getProgressService().get(player);
+            int page = plugin.getQuestService().nextLockedPage(progress);
+            if (page < 0) {
+                player.sendMessage(plugin.getLang().msg("weekly.all-unlocked", "&7已经没有可解锁的页了"));
+                return;
+            }
+            int cost = plugin.getPassConfig().weeklyPageCost();
+            if (cost > 0) {
+                if (!plugin.getEconomy().pointsAvailable()) {
+                    player.sendMessage(plugin.getLang().msg("weekly.no-points-system",
+                            "&c本服没有点券系统，无法解锁"));
+                    return;
+                }
+                int have = plugin.getEconomy().lookPoints(player);
+                if (have < cost) {
+                    player.sendMessage(plugin.getLang().msg("weekly.not-enough-points",
+                            "&c点券不够，需要 &f%need%&c，你有 &f%have%")
+                            .replace("%need%", String.valueOf(cost))
+                            .replace("%have%", String.valueOf(have)));
+                    return;
+                }
+                if (!plugin.getEconomy().takePoints(player, cost)) {
+                    player.sendMessage(plugin.getLang().msg("weekly.not-enough-points",
+                            "&c点券不够，需要 &f%need%&c，你有 &f%have%")
+                            .replace("%need%", String.valueOf(cost))
+                            .replace("%have%", String.valueOf(have)));
+                    return;
+                }
+            }
+            progress.unlockPage(page);
+            plugin.getProgressService().store().save(progress);
+            player.sendMessage(plugin.getLang().msg("weekly.unlocked",
+                    "&a已解锁第 &f%page% &a页，本周多出 &f%count% &a条任务")
+                    .replace("%page%", String.valueOf(page))
+                    .replace("%count%", String.valueOf(plugin.getQuestService().pageSize(page))));
+            render();
+        }
+
         @Override
         public void handleClick(int slot, ClickType type) {
             ButtonSpec backSpec = button("back");
@@ -491,6 +572,13 @@ public final class PassMenus {
             if (closeSpec.enabled() && slot == closeSpec.slot()) {
                 player.closeInventory();
                 return;
+            }
+            if (period == Quest.Period.WEEKLY) {
+                ButtonSpec unlockSpec = button("unlock");
+                if (unlockSpec.enabled() && slot == unlockSpec.slot()) {
+                    unlockNextPage();
+                    return;
+                }
             }
             // 内容区里的点击不影响状态，吞掉即可（MenuListener 已经 cancel 了）
         }

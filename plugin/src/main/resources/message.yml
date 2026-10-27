@@ -8,6 +8,15 @@ quest:
 
 level-up: "&e战令等级提升! 当前 &f%level% &e级"
 
+weekly:
+  unlocked: "&a已解锁第 &f%page% &a页，本周多出 &f%count% &a条任务"
+  all-unlocked: "&7已经没有可解锁的页了"
+  not-enough-points: "&c点券不够，需要 &f%need%&c，你有 &f%have%"
+  no-points-system: "&c本服没有点券系统，无法解锁"
+  unlock-lore-page: "&7解锁第 &f%page% &7页，多出 &f%count% &7条任务"
+  unlock-lore-cost: "&e花费 &f%cost% &e点券 &8(你有 %have%)"
+  unlock-lore-season: "&7解锁本赛季有效，换季后重置"
+
 shop:
   bought: "&a已兑换: &f%item%"
   empty: "&7商店还没有配置商品"

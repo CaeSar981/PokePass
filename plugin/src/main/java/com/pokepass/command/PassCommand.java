@@ -243,7 +243,39 @@ public class PassCommand implements CommandExecutor, TabCompleter {
 
         sender.sendMessage("§a[OK] §f任务表: 每日 " + plugin.getQuestBook().size(Quest.Period.DAILY)
                 + " 个 / 每周 " + plugin.getQuestBook().size(Quest.Period.WEEKLY)
-                + " 个，奖励等级 " + plugin.getRewardBook().maxLevelWithReward());
+                + " 个（每周 " + plugin.getQuestBook().pages(Quest.Period.WEEKLY) + " 页）");
+
+        // 周任务分页：检查有没有「空页」——page 跳号会让玩家花钱解锁到一页空气
+        int totalPages = plugin.getQuestBook().pages(Quest.Period.WEEKLY);
+        if (!plugin.getPassConfig().weeklyPagesEnabled()) {
+            sender.sendMessage("§e[--] §f周任务分页未启用（" + totalPages + " 页全部免费）");
+        } else {
+            StringBuilder empty = new StringBuilder();
+            for (int page = 1; page <= totalPages; page++) {
+                if (plugin.getQuestService().pageSize(page) == 0) {
+                    if (empty.length() > 0) {
+                        empty.append(',');
+                    }
+                    empty.append(page);
+                }
+            }
+            int cost = plugin.getPassConfig().weeklyPageCost();
+            sender.sendMessage((empty.length() == 0 ? "§a[OK] " : "§c[FAIL] ")
+                    + "§f周任务分页: 共 " + totalPages + " 页，免费 "
+                    + plugin.getPassConfig().weeklyFreePages() + " 页，解锁一页 "
+                    + (cost > 0 ? cost + " 点券" : "免费（0 点券）")
+                    + (empty.length() == 0 ? "" : "；空页: " + empty + "（玩家解锁后看不到任务）"));
+        }
+
+        // 奖励覆盖度：奖励表没配到的等级，玩家点开奖励页只会看到「无奖励」
+        int maxLevel = plugin.getPassConfig().maxLevel();
+        int covered = plugin.getRewardBook().coveredLevels();
+        int rewardWarnings = plugin.getRewardBook().warnings().size();
+        sender.sendMessage((covered >= maxLevel && rewardWarnings == 0 ? "§a[OK] " : "§e[--] ")
+                + "§f等级奖励: 已配 " + covered + "/" + maxLevel + " 级"
+                + (rewardWarnings == 0 ? "，无配置告警"
+                : "，有 " + rewardWarnings + " 条告警，第一条: "
+                + plugin.getRewardBook().warnings().get(0)));
 
         // 奖励预检自检：点券/经济没装时，含这类条目的奖励必须被判定成「发不出去」，
         // 而不是照发一遍再标记已领——那样玩家就永久领不到了。

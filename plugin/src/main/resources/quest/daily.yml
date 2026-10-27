@@ -21,6 +21,9 @@
 #   BlockBreak 挖方块 / CraftItem 合成 / PlayerFish 钓鱼 / PickupItem 拾取
 #   EnchantItem 附魔 / Chat 聊天关键字 / InteractEntity NPC 交互 / PixelmonTrade 交易
 #   Pokedex 图鉴物种数 / MaxLevelPokemon 背包满级精灵数 / CheckItem 持有物品数
+#   ReceivedFossil 化石机复活（condition 可填物种名） / DeleteItem 消耗物品
+#   PokedexPercent 图鉴完成度百分比（amount 写 30 就是 30%）
+#   LevelUp 人物等级（快照型，amount 写 30 就是「升到 30 级」）
 #   TrainingFinish 完成特训次数 / WorkFinish 完成打工次数（由特训/打工插件派命令推进）
 
 quests:
@@ -195,3 +198,26 @@ quests:
     lore:
       - "&7图鉴里累计记录 20 种精灵"
       - "&7（本插件自己统计，不看 Pixelmon 图鉴）"
+
+  d-level:
+    name: "&a成长之路"
+    type: LevelUp
+    amount: 30
+    condition: "*"
+    exp: 200
+    icon: EXP_BOTTLE
+    lore:
+      - "&7人物等级达到 &f30 级"
+      - "&7属性是「当前等级」，不是要升 30 级"
+
+  d-dex-percent:
+    name: "&6图鉴进度"
+    type: PokedexPercent
+    amount: 5
+    condition: "*"
+    exp: 250
+    icon: MAP
+    lore:
+      - "&7图鉴完成度达到 &f5%"
+      - "&7分母是 Pixelmon 全图鉴物种数"
+      - "&8由本插件自己统计，装上之后抓的才计入"

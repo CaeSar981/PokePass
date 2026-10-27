@@ -3,6 +3,10 @@
 # ==========================================
 # 字段和 daily.yml 完全一样，只是周期长度不同（每周一刷新，见 config.yml）。
 # 每周任务一般给的经验多、量也大，用来拉开活跃玩家的差距。
+#
+# page       属于第几页；不写就是第 1 页（免费）。
+#            第 2 页起要用点券解锁（config.yml 的 weekly.pages），
+#            解锁后这一页的任务才会出现在每周任务界面里。
 
 quests:
   w-catch:
@@ -56,3 +60,51 @@ quests:
     icon: IRON_PICKAXE
     lore:
       - "&7本周完成 5 次精灵打工并领取"
+
+  # ---------------- 第 2 页（需点券解锁） ----------------
+  # 这一页的门槛更高、给的经验也更多，是「多买一页就多做一轮」的设计。
+
+  w-fossil:
+    name: "&5化石研究者"
+    type: ReceivedFossil
+    amount: 2
+    condition: "*"
+    exp: 2500
+    icon: BONE
+    page: 2
+    lore:
+      - "&7本周从化石机复活 2 只精灵"
+      - "&8条件可填物种名，如化石翼龙写 Aerodactyl"
+
+  w-evs:
+    name: "&d努力值训练"
+    type: EVsGained
+    amount: 500
+    condition: "*"
+    exp: 2500
+    icon: BLAZE_POWDER
+    page: 2
+    lore:
+      - "&7本周累计获得 500 点努力值"
+
+  w-enchant:
+    name: "&7附魔工匠"
+    type: EnchantItem
+    amount: 5
+    condition: "*"
+    exp: 2000
+    icon: ENCHANTMENT_TABLE
+    page: 2
+    lore:
+      - "&7本周附魔 5 次装备"
+
+  w-trade:
+    name: "&a交换达人"
+    type: PixelmonTrade
+    amount: 5
+    condition: "*"
+    exp: 2000
+    icon: EMERALD
+    page: 2
+    lore:
+      - "&7本周与玩家交换 5 只精灵"

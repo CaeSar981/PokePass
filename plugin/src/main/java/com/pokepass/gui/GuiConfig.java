@@ -77,6 +77,8 @@ public class GuiConfig {
             def(menu, "close", 53, "BARRIER", (short) 0, "&c关闭");
         }
         def("reward", "claim-all", 49, "ENDER_CHEST", (short) 0, "&a&l一键领取");
+        // 周任务分页解锁：只有真有下一页时才画出来（见 PassMenus.QuestMenu）
+        def("weekly", "unlock", 49, "TRIPWIRE_HOOK", (short) 0, "&a&l解锁第 %next_page% 页 &7(%page_cost% 点券)");
 
         def("shop", "back", 18, "ARROW", (short) 0, "&f返回");
         def("shop", "close", 26, "BARRIER", (short) 0, "&c关闭");

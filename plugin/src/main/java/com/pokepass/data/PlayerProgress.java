@@ -33,6 +33,14 @@ public class PlayerProgress {
     /** 商店条目 id -> 本赛季已购买次数 */
     private final Map<String, Integer> shopPurchases = new HashMap<String, Integer>();
 
+    /**
+     * 已用点券解锁的周任务页（第 1 页永远免费，不入库）。
+     *
+     * <p>解锁是赛季级的：花点券买的是「这一季多看几页任务」，换季跟着一起清，
+     * 否则老玩家会一直占着上一季买的页。</p>
+     */
+    private final Set<Integer> weeklyPages = new HashSet<Integer>();
+
     private final Set<Integer> claimedFree = new HashSet<Integer>();
     private final Set<Integer> claimedPremium = new HashSet<Integer>();
 
@@ -322,10 +330,33 @@ public class PlayerProgress {
         this.claimedFree.clear();
         this.claimedPremium.clear();
         this.shopPurchases.clear();
+        this.weeklyPages.clear();
         this.dailyKey = "";
         this.weeklyKey = "";
         this.seasonId = newSeasonId;
         this.dirty = true;
+    }
+
+    // ---------- 周任务页 ----------
+
+    /** 除了免费页之外，额外解锁了第几页 */
+    public boolean isPageUnlocked(int page) {
+        return weeklyPages.contains(page);
+    }
+
+    /** 解锁一页，返回 true 表示是新解锁的 */
+    public boolean unlockPage(int page) {
+        if (page <= 1 || weeklyPages.contains(page)) {
+            return false;
+        }
+        weeklyPages.add(page);
+        dirty = true;
+        return true;
+    }
+
+    /** 已解锁的付费页（免费页不在这里，按 config 的 free-pages 单独算） */
+    public Set<Integer> getWeeklyPages() {
+        return weeklyPages;
     }
 
     // ---------- 商店 ----------
