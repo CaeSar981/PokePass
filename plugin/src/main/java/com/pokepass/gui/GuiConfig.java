@@ -151,10 +151,20 @@ public class GuiConfig {
         String path = menu + ".buttons." + id;
 
         boolean enabled = config.getBoolean(path + ".enabled", true);
+        // sprite：精灵头像（Pixelmon 的 pixelmon_sprite），创建失败会记 warning 并退回普通材质
+        ItemStack sprite = null;
+        String spriteText = config.getString(path + ".sprite", "");
+        if (!spriteText.trim().isEmpty()) {
+            sprite = com.pokepass.util.PixelmonSprites.create(spriteText,
+                    config.getInt(path + ".form", 0),
+                    config.getBoolean(path + ".shiny", false),
+                    warnings, "gui.yml: " + path);
+        }
+
         if (!enabled) {
             // 关掉的按钮仍返回默认定义，调用方按 enabled() 跳过渲染与点击
             return new ButtonSpec(menu, id, def.slot, parseMaterial(def.material, path),
-                    def.data, config.getString(path + ".name", def.name), false);
+                    def.data, config.getString(path + ".name", def.name), false, sprite);
         }
 
         int slot = def.slot;
@@ -171,13 +181,13 @@ public class GuiConfig {
             warnings.add("gui.yml: " + menu + ".size=" + size
                     + " 放不下按钮 " + id + "（默认槽位 " + def.slot + "），该按钮被隐藏");
             return new ButtonSpec(menu, id, slot, parseMaterial(def.material, path),
-                    def.data, config.getString(path + ".name", def.name), false);
+                    def.data, config.getString(path + ".name", def.name), false, sprite);
         }
 
         String materialName = config.getString(path + ".material", def.material);
         short data = (short) config.getInt(path + ".data", def.data);
         return new ButtonSpec(menu, id, slot, parseMaterial(materialName, path),
-                data, config.getString(path + ".name", def.name), true);
+                data, config.getString(path + ".name", def.name), true, sprite);
     }
 
     // ------------------------------------------------------------------
@@ -257,8 +267,19 @@ public class GuiConfig {
                 warnings.add("gui.yml: " + path + " 与按钮/内容区撞槽位（" + slot + "），已跳过");
                 continue;
             }
-            ItemStack item = parseItem(String.valueOf(entry.get("material")),
-                    path + ".material", asInt(entry.get("data"), 0));
+            // sprite：精灵头像优先；创建失败（精灵名不认识 / 反射失败）退回 material
+            ItemStack item = null;
+            Object spriteText = entry.get("sprite");
+            if (spriteText != null && !String.valueOf(spriteText).trim().isEmpty()) {
+                item = com.pokepass.util.PixelmonSprites.create(String.valueOf(spriteText),
+                        asInt(entry.get("form"), 0),
+                        Boolean.TRUE.equals(entry.get("shiny")),
+                        warnings, "gui.yml: " + path);
+            }
+            if (item == null) {
+                item = parseItem(String.valueOf(entry.get("material")),
+                        path + ".material", asInt(entry.get("data"), 0));
+            }
             if (item == null) {
                 continue;
             }

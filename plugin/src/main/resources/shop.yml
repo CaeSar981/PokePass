@@ -7,6 +7,8 @@
 # 字段：
 #   icon        显示物品，必须是 Bukkit 1.12.2 的 Material 名
 #   data        物品数据值，一般 0
+#   sprite      可选，精灵头像（Pixelmon 照片物品），写英文物种名或图鉴号；
+#               写了就替代 icon，配 form / shiny 可选
 #   name        显示名（支持 & 颜色码）
 #   lore        自己写的说明
 #   cost.type   points（PlayerPoints 点券）/ money（Vault 金币）

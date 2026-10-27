@@ -59,6 +59,10 @@ Pixelmon 1.12.2 战令插件：每日/每周任务 + 战令等级 + 免费/高�
   分页按这里的格数自动重算。
 - **占位符**：按钮名与装饰物的 name / lore 支持 `%player%`、`%level%`、`%season%`、
   `%days_left%`、`%claimable%`、`%points%`、`%daily_done%` 等实时变量，全表见 gui.yml 头部注释。
+- **精灵图标**：按钮和装饰物都支持 `sprite: Pikachu`（英文物种名或图鉴号，可配
+  `form` / `shiny`），用 Pixelmon 自带的精灵照片物品渲染；任务卡（daily.yml / weekly.yml
+  的 `sprite:` 键）和商品图标（shop.yml 的 `sprite:` 键）同理。精灵名不认识或反射失败
+  会退回普通材质并在 `/zl selftest` 里报出来。
 
 规则：没写的键用默认值（默认值就是当前界面的长相），旧配置不用动；写错的项由
 `/zl selftest` 报出来并退回默认，不会炸插件。改完 `/zl reload` 生效。

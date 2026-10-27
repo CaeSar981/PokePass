@@ -11,6 +11,8 @@
 #   exp        完成给多少战令经验
 #   icon       显示物品，必须是 Bukkit 1.12.2 的 Material 名
 #   data       物品数据值，一般 0
+#   sprite     可选，精灵头像（Pixelmon 照片物品），写英文物种名或图鉴号，
+#              如 sprite: Dedenne；写了就替代 icon，配 form / shiny 可选
 #   lore       自己写的说明，进度和奖励会自动追加在后面
 #
 # 类型速查：
@@ -40,6 +42,7 @@ quests:
     condition: Dedenne
     exp: 200
     icon: PAPER
+    sprite: Dedenne
     lore:
       - "&7捕捉 2 只 &f咚咚鼠"
       - "&7条件里写的是英文物种名"

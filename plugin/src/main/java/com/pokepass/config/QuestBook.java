@@ -65,6 +65,15 @@ public class QuestBook {
                 icon = Material.PAPER;
                 warnings.add(period + " 任务 " + id + " 的 icon 无效，已退化为 PAPER");
             }
+            // sprite：精灵头像（Pixelmon 的 pixelmon_sprite），失败退回普通材质
+            org.bukkit.inventory.ItemStack spriteIcon = null;
+            String sprite = section.getString("sprite", "");
+            if (!sprite.trim().isEmpty()) {
+                spriteIcon = com.pokepass.util.PixelmonSprites.create(sprite,
+                        section.getInt("form", 0),
+                        section.getBoolean("shiny", false),
+                        warnings, path + " 任务 " + id);
+            }
             List<String> lore = new ArrayList<String>();
             for (String line : section.getStringList("lore")) {
                 lore.add(ChatColor.translateAlternateColorCodes('&', line));
@@ -79,7 +88,8 @@ public class QuestBook {
                     section.getInt("exp", 100),
                     icon,
                     (short) section.getInt("data", 0),
-                    lore));
+                    lore,
+                    spriteIcon));
         }
     }
 

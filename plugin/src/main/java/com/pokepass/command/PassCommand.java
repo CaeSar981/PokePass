@@ -304,6 +304,23 @@ public class PassCommand implements CommandExecutor, TabCompleter {
                     + (broken == 0 ? "" : "，其中 " + broken + " 件当前发不出去 (" + firstReason + ")"));
         }
 
+        // 精灵图标：gui/shop/任务里的 sprite 都走 PixelmonSprites 反射创建，
+        // 在这里实测一次，Pixelmon 版本变了也能第一时间在日志里看出来
+        try {
+            java.util.List<String> spriteWarn = new java.util.ArrayList<String>();
+            org.bukkit.inventory.ItemStack sprite =
+                    com.pokepass.util.PixelmonSprites.create("Pikachu", 0, false, spriteWarn, "selftest");
+            if (sprite != null) {
+                sender.sendMessage("§a[OK] §f精灵图标: pixelmon_sprite 创建成功（皮卡丘，"
+                        + "gui/shop/任务的 sprite 键可用）");
+            } else {
+                sender.sendMessage("§c[FAIL] §f精灵图标: 创建失败（"
+                        + (spriteWarn.isEmpty() ? "未知原因" : spriteWarn.get(0)) + "）");
+            }
+        } catch (Throwable t) {
+            sender.sendMessage("§c[FAIL] §f精灵图标: 异常 " + t);
+        }
+
         // 界面配置：gui.yml 里写错的材质 / 越界的槽位 / 撞掉的按钮，启动时就报出来，
         // 免得玩家打开界面才发现某个按钮凭空消失
         java.util.List<String> guiWarnings = plugin.getGuiConfig().warnings();

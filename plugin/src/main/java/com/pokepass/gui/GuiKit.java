@@ -38,7 +38,19 @@ public final class GuiKit {
     }
 
     public static ItemStack item(Material material, int amount, short data, String name, List<String> lore) {
-        ItemStack stack = new ItemStack(material, Math.max(1, amount), data);
+        return finish(new ItemStack(material, Math.max(1, amount), data), name, lore);
+    }
+
+    /** 按钮图标：配了 sprite（精灵头像）就用它，否则用普通材质 */
+    public static ItemStack item(ButtonSpec spec, String name, List<String> lore) {
+        ItemStack base = spec.sprite() != null
+                ? spec.sprite().clone()
+                : new ItemStack(spec.material(), 1, spec.data());
+        return finish(base, name, lore);
+    }
+
+    /** 统一收口：给基础物品套上名字与 lore */
+    public static ItemStack finish(ItemStack stack, String name, List<String> lore) {
         ItemMeta meta = stack.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(color(name));

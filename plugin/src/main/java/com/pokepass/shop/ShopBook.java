@@ -86,6 +86,15 @@ public class ShopBook {
                 icon = Material.PAPER;
                 warnings.add("商店 " + id + " 的 icon 无效，已退化为 PAPER");
             }
+            // sprite：精灵头像（Pixelmon 的 pixelmon_sprite），失败退回普通材质
+            org.bukkit.inventory.ItemStack spriteIcon = null;
+            String sprite = section.getString("sprite", "");
+            if (!sprite.trim().isEmpty()) {
+                spriteIcon = com.pokepass.util.PixelmonSprites.create(sprite,
+                        section.getInt("form", 0),
+                        section.getBoolean("shiny", false),
+                        warnings, "shop.yml: " + id);
+            }
 
             List<String> lore = new ArrayList<String>();
             for (String line : section.getStringList("lore")) {
@@ -113,7 +122,8 @@ public class ShopBook {
                     section.getString("permission", ""),
                     Math.max(0, section.getInt("limit", 0)),
                     slot,
-                    rewards));
+                    rewards,
+                    spriteIcon));
         }
     }
 

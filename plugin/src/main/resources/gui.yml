@@ -13,6 +13,13 @@
 #             与按钮或内容区撞槽位会被跳过
 #    content  （仅 daily / weekly / reward）内容槽位区，支持 "10-16,19-25" 写法
 #
+#  精灵图标（按钮和装饰物都支持）——用 Pixelmon 自带的精灵照片物品：
+#    sprite: Pikachu     精灵英文名（任意大小写）或图鉴号，如 sprite: "25"
+#    form: 0             形态编号，普通精灵写 0
+#    shiny: false        true 用闪光配色
+#  写了 sprite 就不再用 material 渲染；精灵名不认识 / 反射失败会退回
+#  material 并在 /zl selftest 里报出来。
+#
 #  名字/lore 里可用的占位符：
 #    %player% %level% %max_level% %exp_now% %exp_need% %total_exp%
 #    %season% %days_left% %claimable% %points%
@@ -66,7 +73,7 @@ main:
     - { slot: 7, material: STAINED_GLASS_PANE, data: 4 }
     - { slot: 8, material: STAINED_GLASS_PANE, data: 4 }
     - slot: 4
-      material: NETHER_STAR
+      sprite: Pikachu
       glow: true
       name: "&6&l✦ 宝可梦通行证 ✦"
       lore:

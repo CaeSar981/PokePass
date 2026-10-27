@@ -247,8 +247,7 @@ public final class PassMenus {
             levelLore.add("&8&m                        ");
             levelLore.add("&7做完任务自动涨经验");
             if (levelSpec.enabled()) {
-                ItemStack levelItem = GuiKit.item(levelSpec.material(), 1, levelSpec.data(),
-                        applyVars(levelSpec.name()), levelLore);
+                ItemStack levelItem = GuiKit.item(levelSpec,                         applyVars(levelSpec.name()), levelLore);
                 inventory.setItem(levelSpec.slot(), GuiKit.glow(levelItem));
             }
 
@@ -271,13 +270,11 @@ public final class PassMenus {
                     seasonLore.add("&7赛季未启用");
                     seasonLore.add("&7等级会一直累积");
                 }
-                inventory.setItem(seasonSpec.slot(), GuiKit.item(seasonSpec.material(), 1,
-                        seasonSpec.data(), applyVars(seasonSpec.name()), seasonLore));
+                inventory.setItem(seasonSpec.slot(), GuiKit.item(seasonSpec, applyVars(seasonSpec.name()), seasonLore));
             }
 
             if (dailySpec.enabled()) {
-                inventory.setItem(dailySpec.slot(), GuiKit.item(dailySpec.material(), 1, dailySpec.data(),
-                        applyVars(dailySpec.name()), Arrays.asList(
+                inventory.setItem(dailySpec.slot(), GuiKit.item(dailySpec,                         applyVars(dailySpec.name()), Arrays.asList(
                         "&8&m                        ",
                         "&7进度 &f" + doneCount(Quest.Period.DAILY) + "&7/&f" + visibleCount(Quest.Period.DAILY),
                         "&7每天 &f" + plugin.getPassConfig().dailyResetHour() + " &7点刷新",
@@ -286,8 +283,7 @@ public final class PassMenus {
             }
 
             if (weeklySpec.enabled()) {
-                inventory.setItem(weeklySpec.slot(), GuiKit.item(weeklySpec.material(), 1, weeklySpec.data(),
-                        applyVars(weeklySpec.name()), Arrays.asList(
+                inventory.setItem(weeklySpec.slot(), GuiKit.item(weeklySpec,                         applyVars(weeklySpec.name()), Arrays.asList(
                         "&8&m                        ",
                         "&7进度 &f" + doneCount(Quest.Period.WEEKLY) + "&7/&f" + visibleCount(Quest.Period.WEEKLY),
                         "&7每周一刷新",
@@ -304,8 +300,7 @@ public final class PassMenus {
                 rewardLore.add("&7可领取 &f" + claimable + " &7份");
                 rewardLore.add("&8&m                        ");
                 rewardLore.add("&e点击查看");
-                ItemStack rewardItem = GuiKit.item(rewardSpec.material(), 1, rewardSpec.data(),
-                        applyVars(rewardSpec.name()), rewardLore);
+                ItemStack rewardItem = GuiKit.item(rewardSpec,                         applyVars(rewardSpec.name()), rewardLore);
                 if (claimable > 0) {
                     GuiKit.glow(rewardItem);
                 }
@@ -321,13 +316,11 @@ public final class PassMenus {
                 shopLore.add("&7点券余额 &e" + plugin.getEconomy().lookPoints(player));
                 shopLore.add("&8&m                        ");
                 shopLore.add("&e点击进入");
-                inventory.setItem(shopSpec.slot(), GuiKit.item(shopSpec.material(), 1, shopSpec.data(),
-                        applyVars(shopSpec.name()), shopLore));
+                inventory.setItem(shopSpec.slot(), GuiKit.item(shopSpec,                         applyVars(shopSpec.name()), shopLore));
             }
 
             if (closeSpec.enabled()) {
-                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec.material(), 1, closeSpec.data(),
-                        applyVars(closeSpec.name()), null));
+                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec,                         applyVars(closeSpec.name()), null));
             }
 
             renderDecor();
@@ -433,20 +426,16 @@ public final class PassMenus {
             }
 
             if (backSpec.enabled()) {
-                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec.material(), 1,
-                        backSpec.data(), applyVars(backSpec.name()), null));
+                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec, applyVars(backSpec.name()), null));
             }
             if (prevSpec.enabled() && page > 0) {
-                inventory.setItem(prevSpec.slot(), GuiKit.item(prevSpec.material(), 1,
-                        prevSpec.data(), applyVars(prevSpec.name()), null));
+                inventory.setItem(prevSpec.slot(), GuiKit.item(prevSpec, applyVars(prevSpec.name()), null));
             }
             if (nextSpec.enabled() && page < maxPage) {
-                inventory.setItem(nextSpec.slot(), GuiKit.item(nextSpec.material(), 1,
-                        nextSpec.data(), applyVars(nextSpec.name()), null));
+                inventory.setItem(nextSpec.slot(), GuiKit.item(nextSpec, applyVars(nextSpec.name()), null));
             }
             if (closeSpec.enabled()) {
-                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec.material(), 1,
-                        closeSpec.data(), applyVars(closeSpec.name()), null));
+                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec, applyVars(closeSpec.name()), null));
             }
 
             renderDecor();
@@ -466,7 +455,12 @@ public final class PassMenus {
                 lore.add(GuiKit.bar(current, quest.getAmount(), 16, "&b", "&8"));
             }
             lore.add("&7奖励经验 &f" + quest.getExp());
-            ItemStack item = GuiKit.item(quest.getIcon(), 1, quest.getName(), lore);
+            ItemStack item;
+            if (quest.getSpriteIcon() != null) {
+                item = GuiKit.finish(quest.getSpriteIcon().clone(), quest.getName(), lore);
+            } else {
+                item = GuiKit.item(quest.getIcon(), 1, quest.getName(), lore);
+            }
             if (complete) {
                 GuiKit.glow(item);
             }
@@ -572,26 +566,21 @@ public final class PassMenus {
             }
 
             if (backSpec.enabled()) {
-                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec.material(), 1,
-                        backSpec.data(), applyVars(backSpec.name()), null));
+                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec, applyVars(backSpec.name()), null));
             }
             if (prevSpec.enabled() && page > 0) {
-                inventory.setItem(prevSpec.slot(), GuiKit.item(prevSpec.material(), 1,
-                        prevSpec.data(), applyVars(prevSpec.name()), null));
+                inventory.setItem(prevSpec.slot(), GuiKit.item(prevSpec, applyVars(prevSpec.name()), null));
             }
             if (nextSpec.enabled() && page < maxPage) {
-                inventory.setItem(nextSpec.slot(), GuiKit.item(nextSpec.material(), 1,
-                        nextSpec.data(), applyVars(nextSpec.name()), null));
+                inventory.setItem(nextSpec.slot(), GuiKit.item(nextSpec, applyVars(nextSpec.name()), null));
             }
             int claimable = plugin.getRewardService().claimable(player);
             if (claimSpec.enabled() && claimable > 0) {
-                inventory.setItem(claimSpec.slot(), GuiKit.glow(GuiKit.item(claimSpec.material(), 1,
-                        claimSpec.data(), applyVars(claimSpec.name()) + " &7(" + claimable + ")",
+                inventory.setItem(claimSpec.slot(), GuiKit.glow(GuiKit.item(claimSpec, applyVars(claimSpec.name()) + " &7(" + claimable + ")",
                         Arrays.asList("&7把所有够等级的奖励一次领完"))));
             }
             if (closeSpec.enabled()) {
-                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec.material(), 1,
-                        closeSpec.data(), applyVars(closeSpec.name()), null));
+                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec, applyVars(closeSpec.name()), null));
             }
 
             renderDecor();
@@ -778,12 +767,10 @@ public final class PassMenus {
             }
 
             if (backSpec.enabled() && backSpec.slot() < size()) {
-                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec.material(), 1,
-                        backSpec.data(), applyVars(backSpec.name()), null));
+                inventory.setItem(backSpec.slot(), GuiKit.item(backSpec, applyVars(backSpec.name()), null));
             }
             if (closeSpec.enabled() && closeSpec.slot() < size()) {
-                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec.material(), 1,
-                        closeSpec.data(), applyVars(closeSpec.name()), null));
+                inventory.setItem(closeSpec.slot(), GuiKit.item(closeSpec, applyVars(closeSpec.name()), null));
             }
 
             // 商品位是 shop.yml 定的，装饰物别把它们盖掉
@@ -831,7 +818,12 @@ public final class PassMenus {
                 lore.add("&e点击兑换");
             }
 
-            ItemStack stack = GuiKit.item(item.getIcon(), 1, item.getData(), item.getName(), lore);
+            ItemStack stack;
+            if (item.getSpriteIcon() != null) {
+                stack = GuiKit.finish(item.getSpriteIcon().clone(), item.getName(), lore);
+            } else {
+                stack = GuiKit.item(item.getIcon(), 1, item.getData(), item.getName(), lore);
+            }
             if (remaining != 0 && (!item.hasPermissionLimit() || player.hasPermission(item.getPermission()))) {
                 GuiKit.glow(stack);
             }

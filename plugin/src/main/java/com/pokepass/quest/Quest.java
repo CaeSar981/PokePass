@@ -37,9 +37,17 @@ public class Quest {
     private final Material icon;
     private final short data;
     private final List<String> lore;
+    /** 精灵头像图标（任务 yml 的 sprite 键）；null 表示用普通材质 */
+    private final org.bukkit.inventory.ItemStack spriteIcon;
 
     public Quest(String id, Period period, String name, QuestType type, int amount,
                  List<String> conditions, int exp, Material icon, short data, List<String> lore) {
+        this(id, period, name, type, amount, conditions, exp, icon, data, lore, null);
+    }
+
+    public Quest(String id, Period period, String name, QuestType type, int amount,
+                 List<String> conditions, int exp, Material icon, short data, List<String> lore,
+                 org.bukkit.inventory.ItemStack spriteIcon) {
         this.id = id;
         this.period = period;
         this.name = name;
@@ -50,6 +58,7 @@ public class Quest {
         this.icon = icon;
         this.data = data;
         this.lore = lore;
+        this.spriteIcon = spriteIcon;
     }
 
     public String getId() {
@@ -82,6 +91,11 @@ public class Quest {
 
     public short getData() {
         return data;
+    }
+
+    /** 精灵头像图标；null 表示用普通材质渲染 */
+    public org.bukkit.inventory.ItemStack getSpriteIcon() {
+        return spriteIcon;
     }
 
     public List<String> getLore() {

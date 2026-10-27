@@ -29,10 +29,18 @@ public class ShopItem {
     private final int limit;
     private final int slot;
     private final List<RewardEntry> rewards;
+    /** 精灵头像图标（shop.yml 的 sprite 键）；null 表示用普通材质 */
+    private final org.bukkit.inventory.ItemStack spriteIcon;
 
     public ShopItem(String id, Material icon, short data, String name, List<String> lore,
                     Cost cost, int price, String permission, int limit, int slot,
                     List<RewardEntry> rewards) {
+        this(id, icon, data, name, lore, cost, price, permission, limit, slot, rewards, null);
+    }
+
+    public ShopItem(String id, Material icon, short data, String name, List<String> lore,
+                    Cost cost, int price, String permission, int limit, int slot,
+                    List<RewardEntry> rewards, org.bukkit.inventory.ItemStack spriteIcon) {
         this.id = id;
         this.icon = icon;
         this.data = data;
@@ -44,6 +52,7 @@ public class ShopItem {
         this.limit = limit;
         this.slot = slot;
         this.rewards = rewards;
+        this.spriteIcon = spriteIcon;
     }
 
     public String getId() {
@@ -90,6 +99,11 @@ public class ShopItem {
 
     public int getSlot() {
         return slot;
+    }
+
+    /** 精灵头像图标；null 表示用普通材质渲染 */
+    public org.bukkit.inventory.ItemStack getSpriteIcon() {
+        return spriteIcon;
     }
 
     public List<RewardEntry> getRewards() {
